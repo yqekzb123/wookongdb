@@ -22,7 +22,6 @@
 #include "tdb/storage_processor.h"
 #include "tdb/paxos_message.h"
 #include "tdb/rangestatistics.h"
-#include "paxos/c_parse_include.h"
 
 typedef struct PaxosMsgPut
 {

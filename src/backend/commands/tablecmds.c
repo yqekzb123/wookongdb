@@ -998,11 +998,11 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 				if (rangedesc.replica[i]->segmentID == currentSeg)
 				{
 					storeNewRangeDesc(rangedesc);
-					SegmentID* seglist = getRangeSegID(rangedesc);
-					bool result = Rangeengine_create_paxos(rangedesc.rangeID, seglist,
-								rangedesc.replica_num);
-					ereport(LOG,(errmsg("PAXOS: range %d paxos start result = %d",
-							rangedesc.rangeID, result)));
+					// SegmentID* seglist = getRangeSegID(rangedesc);
+					// bool result = Rangeengine_create_paxos(rangedesc.rangeID, seglist,
+								// rangedesc.replica_num);
+					// ereport(LOG,(errmsg("PAXOS: range %d paxos start result = %d",
+							// rangedesc.rangeID, result)));
 					break;
 				}
 			}
@@ -1015,7 +1015,6 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 		{
 			stmt->replica_segid[i] = rangedesc.replica[i]->segmentID;
 		}
-
 	}
 	else
 	{

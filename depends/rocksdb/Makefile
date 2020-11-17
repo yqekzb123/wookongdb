@@ -12,6 +12,9 @@ SHELL := $(shell which bash)
 CLEAN_FILES = # deliberately empty, so we can append below.
 CFLAGS += -g3 -ggdb -O3 -fno-strict-aliasing -ldl -fno-omit-frame-pointer ${EXTRA_CFLAGS}
 CXXFLAGS += -std=c++11 -g3 -ggdb -O3 -fno-strict-aliasing -ldl -fno-omit-frame-pointer ${EXTRA_CXXFLAGS}
+# CFLAGS += -g3 -ggdb -O0 -fno-strict-aliasing -ldl -fno-omit-frame-pointer ${EXTRA_CFLAGS}
+# CXXFLAGS += -std=c++11 -g3 -ggdb -O0 -fno-strict-aliasing -ldl -fno-omit-frame-pointer ${EXTRA_CXXFLAGS}
+
 LDFLAGS += $(EXTRA_LDFLAGS)
 MACHINE ?= $(shell uname -m)
 ARFLAGS = ${EXTRA_ARFLAGS} rs

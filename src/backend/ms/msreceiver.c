@@ -142,640 +142,640 @@ SendMSHeartBeat(const char *messagetype, HeartBeatPlan hp, int planid)
 static void
 SendMSSplitReq(StringInfoData *buf, SplitPreparePlan splitplan, int planid)
 {
-	Assert(ssm_statistics != NULL);
-	/* Send a M-S message */
-	pq_beginmessage(buf, 'M');
-	Assert(splitplan->header.ms_plan_type == MS_SPLIT_PREPARE);
-	pq_sendint(buf, splitplan->header.ms_plan_type, 4);
-	pq_sendint(buf, planid, 4);
-	/*  */
-	pq_sendint(buf, splitplan->split_range->rangeID, 4);
-	pq_sendint(buf, splitplan->split_range->version, 4);
-	pq_sendint(buf, splitplan->split_range->replica_num, 4);		/* # range statistics len */
+	// Assert(ssm_statistics != NULL);
+	// /* Send a M-S message */
+	// pq_beginmessage(buf, 'M');
+	// Assert(splitplan->header.ms_plan_type == MS_SPLIT_PREPARE);
+	// pq_sendint(buf, splitplan->header.ms_plan_type, 4);
+	// pq_sendint(buf, planid, 4);
+	// /*  */
+	// pq_sendint(buf, splitplan->split_range->rangeID, 4);
+	// pq_sendint(buf, splitplan->split_range->version, 4);
+	// pq_sendint(buf, splitplan->split_range->replica_num, 4);		/* # range statistics len */
 
-	pq_sendint(buf, splitplan->split_range->startkey.len, 4);
-	pq_sendtext(buf, (char*)splitplan->split_range->startkey.data, splitplan->split_range->startkey.len);
+	// pq_sendint(buf, splitplan->split_range->startkey.len, 4);
+	// pq_sendtext(buf, (char*)splitplan->split_range->startkey.data, splitplan->split_range->startkey.len);
 
-	pq_sendint(buf, splitplan->split_range->endkey.len, 4);
-	pq_sendtext(buf, (char*)splitplan->split_range->endkey.data, splitplan->split_range->endkey.len);
+	// pq_sendint(buf, splitplan->split_range->endkey.len, 4);
+	// pq_sendtext(buf, (char*)splitplan->split_range->endkey.data, splitplan->split_range->endkey.len);
 
-	for (int i = 0; i < splitplan->split_range->replica_num; i++)
-	{
-		Replica rep = splitplan->split_range->replica[i];
+	// for (int i = 0; i < splitplan->split_range->replica_num; i++)
+	// {
+	// 	Replica rep = splitplan->split_range->replica[i];
 
-		pq_sendint(buf, rep->replicaID, 4);
-		pq_sendint(buf, rep->LeaderReplicaID, 4);
-		pq_sendint(buf, rep->segmentID, 4);
-		pq_sendint(buf, rep->replica_state, 4);
-	}
-	pq_sendint(buf, splitplan->split_key.len, 4);
-	pq_sendtext(buf, (char*)splitplan->split_key.data, splitplan->split_key.len);
+	// 	pq_sendint(buf, rep->replicaID, 4);
+	// 	pq_sendint(buf, rep->LeaderReplicaID, 4);
+	// 	pq_sendint(buf, rep->segmentID, 4);
+	// 	pq_sendint(buf, rep->replica_state, 4);
+	// }
+	// pq_sendint(buf, splitplan->split_key.len, 4);
+	// pq_sendtext(buf, (char*)splitplan->split_key.data, splitplan->split_key.len);
 
-	pq_endmessage(buf);
-	if (MSPLAN_EXEC_LOG)
-		ereport(LOG,
-				(errmsg("send MS response type: %d", splitplan->header.ms_plan_type)));
+	// pq_endmessage(buf);
+	// if (MSPLAN_EXEC_LOG)
+	// 	ereport(LOG,
+	// 			(errmsg("send MS response type: %d", splitplan->header.ms_plan_type)));
 }
 
 static void
 HandleCheckOneSplit(const char *messagetype, SplitPreparePlan spp, int planid)
 {
-	BeginCommand(messagetype, DestRemote);
-	StringInfoData buf;
-	initStringInfo(&buf);
+// 	BeginCommand(messagetype, DestRemote);
+// 	StringInfoData buf;
+// 	initStringInfo(&buf);
 
-	RangeID rangeid = spp->split_range->rangeID;
-	RangeSatistics *rangestat = get_rangesatistics_from_list(rangeid);
-	SplitPreparePlan splitplan = seg_check_one_range_split(*rangestat);
-	if (splitplan != NULL)
-	{
-		SendMSSplitReq(&buf, splitplan, planid);
-		pfree(splitplan);
-	}
-	else
-	{
-		BeginCommand(messagetype, DestRemote);
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_SPLIT_FAILD, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_SPLIT_FAILD)));
-	}
-	EndCommand(messagetype, DestRemote);
-	pq_flush();
+// 	RangeID rangeid = spp->split_range->rangeID;
+// 	RangeSatistics *rangestat = get_rangesatistics_from_list(rangeid);
+// 	SplitPreparePlan splitplan = seg_check_one_range_split(*rangestat);
+// 	if (splitplan != NULL)
+// 	{
+// 		SendMSSplitReq(&buf, splitplan, planid);
+// 		pfree(splitplan);
+// 	}
+// 	else
+// 	{
+// 		BeginCommand(messagetype, DestRemote);
+// 		pq_beginmessage(&buf, 'M');
+// 		pq_sendint(&buf, MS_SPLIT_FAILD, 4);
+// 		pq_sendint(&buf, planid, 4);
+// 		pq_endmessage(&buf);
+// 		if (MSPLAN_EXEC_LOG)
+// 			ereport(LOG,
+// 				(errmsg("send MS response type: %d", MS_SPLIT_FAILD)));
+// 	}
+// 	EndCommand(messagetype, DestRemote);
+// 	pq_flush();
 }
 
 static void
 HandleMSSplit(const char *messagetype, SplitPlan sp, int planid)
 {
-	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
-	RangeDesc oldRange = findUpRangeDescByID(sp->old_range->rangeID);
-	setRangeDescState(sp->new_range, sp);
-	setRangeDescState(sp->old_range, sp);
-	if (oldRange.rangeID == sp->old_range->rangeID)
-	{
-		storeNewRangeDesc(*sp->new_range);
-		storeNewRangeDesc(*sp->old_range);
-		SegmentID* seglist = getRangeSegID(*sp->new_range);
-		bool result = Rangeengine_create_paxos(sp->new_range->rangeID, seglist, sp->new_range->replica_num);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,(errmsg("PAXOS: range %d paxos start result = %d",
-						sp->new_range->rangeID, result)));
-	}
-	storeNewRangeRoute(*sp->new_range);
-	storeNewRangeRoute(*sp->old_range);
+// 	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
+// 	RangeDesc oldRange = findUpRangeDescByID(sp->old_range->rangeID);
+// 	setRangeDescState(sp->new_range, sp);
+// 	setRangeDescState(sp->old_range, sp);
+// 	if (oldRange.rangeID == sp->old_range->rangeID)
+// 	{
+// 		storeNewRangeDesc(*sp->new_range);
+// 		storeNewRangeDesc(*sp->old_range);
+// 		SegmentID* seglist = getRangeSegID(*sp->new_range);
+// 		bool result = Rangeengine_create_paxos(sp->new_range->rangeID, seglist, sp->new_range->replica_num);
+// 		if (MSPLAN_EXEC_LOG)
+// 			ereport(LOG,(errmsg("PAXOS: range %d paxos start result = %d",
+// 						sp->new_range->rangeID, result)));
+// 	}
+// 	storeNewRangeRoute(*sp->new_range);
+// 	storeNewRangeRoute(*sp->old_range);
 
-	StringInfoData buf;
+// 	StringInfoData buf;
 
-	initStringInfo(&buf);
+// 	initStringInfo(&buf);
 
-	BeginCommand(messagetype, DestRemote);
+// 	BeginCommand(messagetype, DestRemote);
 
-	pq_beginmessage(&buf, 'M');
-	pq_sendint(&buf, MS_SPLIT_SUCCESS, 4);
-	pq_sendint(&buf, planid, 4);
-	pq_endmessage(&buf);
+// 	pq_beginmessage(&buf, 'M');
+// 	pq_sendint(&buf, MS_SPLIT_SUCCESS, 4);
+// 	pq_sendint(&buf, planid, 4);
+// 	pq_endmessage(&buf);
 
-	EndCommand(messagetype, DestRemote);
+// 	EndCommand(messagetype, DestRemote);
 
-	pq_flush();
-	if (MSPLAN_EXEC_LOG)
-		ereport(LOG,
-				(errmsg("send MS response type: %d", MS_SPLIT_COMPLETE)));
+// 	pq_flush();
+// 	if (MSPLAN_EXEC_LOG)
+// 		ereport(LOG,
+// 				(errmsg("send MS response type: %d", MS_SPLIT_COMPLETE)));
 }
 
 static void
 HandleMSSplitComplete(const char *messagetype, SplitPlan sp, int planid)
 {
-	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
-	RangeDesc oldRange = findUpRangeRoute(sp->old_range->endkey);
-	RangeDesc newRange = findUpRangeRoute(sp->new_range->endkey);
-	Assert(oldRange.rangeID == sp->old_range->rangeID);
-	Assert(newRange.rangeID == sp->new_range->rangeID);
-	setRangeDescState(&oldRange, sp);
-	setRangeDescState(&newRange, sp);
-	RangeDesc old_range_desc = findUpRangeDescByID(sp->old_range->rangeID);
-	if (old_range_desc.rangeID == sp->old_range->rangeID)
-	{
-		storeNewRangeDesc(oldRange);
-		storeNewRangeDesc(newRange);
-		int old_id = FindRangeStatisticsByRangeID(oldRange.rangeID);
-		int new_id = FindRangeStatisticsByRangeID(newRange.rangeID);
-		InitRangeStatistics(newRange, new_id);
-		InitRangeStatistics(oldRange, old_id);
-	}
-	storeNewRangeRoute(oldRange);
-	storeNewRangeRoute(newRange);
+	// /* TODO: we need to control the We also need to deal with concurrency conflicts. */
+	// RangeDesc oldRange = findUpRangeRoute(sp->old_range->endkey);
+	// RangeDesc newRange = findUpRangeRoute(sp->new_range->endkey);
+	// Assert(oldRange.rangeID == sp->old_range->rangeID);
+	// Assert(newRange.rangeID == sp->new_range->rangeID);
+	// setRangeDescState(&oldRange, sp);
+	// setRangeDescState(&newRange, sp);
+	// RangeDesc old_range_desc = findUpRangeDescByID(sp->old_range->rangeID);
+	// if (old_range_desc.rangeID == sp->old_range->rangeID)
+	// {
+	// 	storeNewRangeDesc(oldRange);
+	// 	storeNewRangeDesc(newRange);
+	// 	int old_id = FindRangeStatisticsByRangeID(oldRange.rangeID);
+	// 	int new_id = FindRangeStatisticsByRangeID(newRange.rangeID);
+	// 	InitRangeStatistics(newRange, new_id);
+	// 	InitRangeStatistics(oldRange, old_id);
+	// }
+	// storeNewRangeRoute(oldRange);
+	// storeNewRangeRoute(newRange);
 
-	StringInfoData buf;
+	// StringInfoData buf;
 
-	initStringInfo(&buf);
+	// initStringInfo(&buf);
 
-	BeginCommand(messagetype, DestRemote);
+	// BeginCommand(messagetype, DestRemote);
 
-	pq_beginmessage(&buf, 'M');
-	pq_sendint(&buf, MS_SPLIT_COMPLETE, 4);
-	pq_sendint(&buf, planid, 4);
-	pq_endmessage(&buf);
+	// pq_beginmessage(&buf, 'M');
+	// pq_sendint(&buf, MS_SPLIT_COMPLETE, 4);
+	// pq_sendint(&buf, planid, 4);
+	// pq_endmessage(&buf);
 
-	EndCommand(messagetype, DestRemote);
+	// EndCommand(messagetype, DestRemote);
 
-	pq_flush();
-	if (MSPLAN_EXEC_LOG)
-		ereport(LOG,
-				(errmsg("send MS response type: %d", MS_SPLIT_COMPLETE)));
+	// pq_flush();
+	// if (MSPLAN_EXEC_LOG)
+	// 	ereport(LOG,
+				// (errmsg("send MS response type: %d", MS_SPLIT_COMPLETE)));
 }
 
 bool
 ExecRangeMerge(MergePlan sp)
 {
-	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
-	RangeDesc firstRange = findUpRangeRoute(sp->first_range->endkey);
-	RangeDesc secondRange = findUpRangeRoute(sp->second_range->endkey);
-	/*
-	 * If the query is found by the routing result of the merged range, the next range,
-	 * indicates that the merge operation has been completed.
-	 */
-	if (firstRange.rangeID != sp->second_range->rangeID)
-	{
-		/*
-		 * If the rangeid found is different from the two id used for merge,
-		 * it is not clear what is going on. Report a mistake first
-		 */
-		if (firstRange.rangeID != sp->first_range->rangeID)
-		{
-			ereport(WARNING,
-				(errmsg("route find the range id %d is different from two range %d and %d",
-					firstRange.rangeID, sp->first_range->rangeID, sp->second_range->rangeID)));
-			return false;
-		}
-		Assert(firstRange.rangeID == sp->first_range->rangeID);
-		Assert(secondRange.rangeID == sp->second_range->rangeID);
+	// /* TODO: we need to control the We also need to deal with concurrency conflicts. */
+	// RangeDesc firstRange = findUpRangeRoute(sp->first_range->endkey);
+	// RangeDesc secondRange = findUpRangeRoute(sp->second_range->endkey);
+	// /*
+	//  * If the query is found by the routing result of the merged range, the next range,
+	//  * indicates that the merge operation has been completed.
+	//  */
+	// if (firstRange.rangeID != sp->second_range->rangeID)
+	// {
+	// 	/*
+	// 	 * If the rangeid found is different from the two id used for merge,
+	// 	 * it is not clear what is going on. Report a mistake first
+	// 	 */
+	// 	if (firstRange.rangeID != sp->first_range->rangeID)
+	// 	{
+	// 		ereport(WARNING,
+	// 			(errmsg("route find the range id %d is different from two range %d and %d",
+	// 				firstRange.rangeID, sp->first_range->rangeID, sp->second_range->rangeID)));
+	// 		return false;
+	// 	}
+	// 	Assert(firstRange.rangeID == sp->first_range->rangeID);
+	// 	Assert(secondRange.rangeID == sp->second_range->rangeID);
 
-		mergeRange(&firstRange, &secondRange);
+	// 	mergeRange(&firstRange, &secondRange);
 
-		RangeDesc first_range_desc = findUpRangeDescByID(sp->first_range->rangeID);
-		if (first_range_desc.rangeID == sp->first_range->rangeID)
-		{
-			removeRangeDesc(firstRange);
-			storeNewRangeDesc(secondRange);
+	// 	RangeDesc first_range_desc = findUpRangeDescByID(sp->first_range->rangeID);
+	// 	if (first_range_desc.rangeID == sp->first_range->rangeID)
+	// 	{
+	// 		removeRangeDesc(firstRange);
+	// 		storeNewRangeDesc(secondRange);
 
-			Rangeengine_remove_paxos(firstRange.rangeID);
+	// 		Rangeengine_remove_paxos(firstRange.rangeID);
 
-			int new_id = FindRangeStatisticsByRangeID(secondRange.rangeID);
-			InitRangeStatistics(secondRange, new_id);
-		}
-		removeRangeRoute(firstRange);
-		storeNewRangeRoute(secondRange);
-	}
+	// 		int new_id = FindRangeStatisticsByRangeID(secondRange.rangeID);
+	// 		InitRangeStatistics(secondRange, new_id);
+	// 	}
+	// 	removeRangeRoute(firstRange);
+	// 	storeNewRangeRoute(secondRange);
+	// }
 	return true;
 }
 
 static void
 HandleMSMerge(const char *messagetype, MergePlan sp, int planid)
 {
-	bool result = ExecRangeMerge(sp);
-	if (!result)
-	{
-		StringInfoData buf;
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// bool result = ExecRangeMerge(sp);
+	// if (!result)
+	// {
+	// 	StringInfoData buf;
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_MERGE_FAILED, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_MERGE_FAILED, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_MERGE_FAILED)));
-	}
-	else
-	{
-		StringInfoData buf;
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// 	EndCommand(messagetype, DestRemote);
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("send MS response type: %d", MS_MERGE_FAILED)));
+	// }
+	// else
+	// {
+	// 	StringInfoData buf;
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_MERGE_SUCCESS, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_MERGE_SUCCESS, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
+	// 	EndCommand(messagetype, DestRemote);
 
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_MERGE_SUCCESS)));
-	}
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("send MS response type: %d", MS_MERGE_SUCCESS)));
+	// }
 }
 
 bool
 ExecAddReplica(AddReplicaPlan sp)
 {
-	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
-	RangeDesc range = findUpRangeRoute(sp->range->endkey);
-	/*
-	 * If the rangeid found through the route is not the same as planned. This is a mistake.
-	 */
-	if (range.rangeID != sp->range->rangeID)
-	{
-		ereport(WARNING,
-			(errmsg("route find the range id %d is different from range %d",
-				range.rangeID, sp->range->rangeID)));
-		return false;
-	}
-	bool isleader = false;
-	Replica newReplica = findUpReplicaOnOneSeg(range, sp->targetSegID, &isleader);
+	// /* TODO: we need to control the We also need to deal with concurrency conflicts. */
+	// RangeDesc range = findUpRangeRoute(sp->range->endkey);
+	// /*
+	//  * If the rangeid found through the route is not the same as planned. This is a mistake.
+	//  */
+	// if (range.rangeID != sp->range->rangeID)
+	// {
+	// 	ereport(WARNING,
+	// 		(errmsg("route find the range id %d is different from range %d",
+	// 			range.rangeID, sp->range->rangeID)));
+	// 	return false;
+	// }
+	// bool isleader = false;
+	// Replica newReplica = findUpReplicaOnOneSeg(range, sp->targetSegID, &isleader);
 
-	if (newReplica != NULL)
-		return true;
-	RangeDesc range_desc = findUpRangeDescByID(sp->range->rangeID);
-	Replica leader = findUpLeader(range);
-	Replica replica = CreateNewReplica(range.replica_num, sp->targetSegID, leader->replicaID);
-	replica->replica_state = follower_working;
-	AddReplicaToRange(&range, replica);
-	if (range_desc.rangeID == sp->range->rangeID || GpIdentity.segindex == sp->targetSegID)
-	{
-		storeNewRangeDesc(range);
+	// if (newReplica != NULL)
+	// 	return true;
+	// RangeDesc range_desc = findUpRangeDescByID(sp->range->rangeID);
+	// Replica leader = findUpLeader(range);
+	// Replica replica = CreateNewReplica(range.replica_num, sp->targetSegID, leader->replicaID);
+	// replica->replica_state = follower_working;
+	// AddReplicaToRange(&range, replica);
+	// if (range_desc.rangeID == sp->range->rangeID || GpIdentity.segindex == sp->targetSegID)
+	// {
+	// 	storeNewRangeDesc(range);
 
-		int new_id = FindRangeStatisticsByRangeID(range.rangeID);
-		InitRangeStatistics(range, new_id);
-	}
-	findUpReplicaOnThisSeg(range, &isleader);
-	if (isleader)
-	{
-		Rangeengine_add_replica(range.rangeID, sp->targetSegID);
-	}
-	if (GpIdentity.segindex == sp->targetSegID)
-	{
-		SegmentID* seglist = getRangeSegID(range);
-		bool result = Rangeengine_create_paxos(range.rangeID, seglist,
-								range.replica_num);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("PAXOS: add range %d replica on seg %d result = %d",
-					range.rangeID, sp->targetSegID, result)));
-	}
-	storeNewRangeRoute(range);
+	// 	int new_id = FindRangeStatisticsByRangeID(range.rangeID);
+	// 	InitRangeStatistics(range, new_id);
+	// }
+	// findUpReplicaOnThisSeg(range, &isleader);
+	// if (isleader)
+	// {
+	// 	Rangeengine_add_replica(range.rangeID, sp->targetSegID);
+	// }
+	// if (GpIdentity.segindex == sp->targetSegID)
+	// {
+	// 	SegmentID* seglist = getRangeSegID(range);
+	// 	bool result = Rangeengine_create_paxos(range.rangeID, seglist,
+	// 							range.replica_num);
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("PAXOS: add range %d replica on seg %d result = %d",
+	// 				range.rangeID, sp->targetSegID, result)));
+	// }
+	// storeNewRangeRoute(range);
 	return true;
 }
 
 static void
 HanldeMSAddReplica(const char *messagetype, AddReplicaPlan sp, int planid)
 {
-	bool result = ExecAddReplica(sp);
-	if (!result)
-	{
-		StringInfoData buf;
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// bool result = ExecAddReplica(sp);
+	// if (!result)
+	// {
+	// 	StringInfoData buf;
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_ADDREPLICA_FAILED, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_ADDREPLICA_FAILED, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-			(errmsg("send MS response type: %d", MS_ADDREPLICA_FAILED)));
-	}
-	else
-	{
-		StringInfoData buf;
+	// 	EndCommand(messagetype, DestRemote);
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 		(errmsg("send MS response type: %d", MS_ADDREPLICA_FAILED)));
+	// }
+	// else
+	// {
+	// 	StringInfoData buf;
 
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_ADDREPLICA_SUCCESS, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_ADDREPLICA_SUCCESS, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
+	// 	EndCommand(messagetype, DestRemote);
 
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_ADDREPLICA_SUCCESS)));
-	}
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("send MS response type: %d", MS_ADDREPLICA_SUCCESS)));
+	// }
 }
 
 bool
 ExecRemoveReplica(RemoveReplicaPlan sp)
 {
-	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
-	RangeDesc range = findUpRangeRoute(sp->range->endkey);
-	/*
-	 * If the rangeid found through the route is not the same as planned. This is a mistake.
-	 */
-	if (range.rangeID != sp->range->rangeID)
-	{
-		ereport(WARNING,
-			(errmsg("route find the range id %d is different from range %d",
-				range.rangeID, sp->range->rangeID)));
-		return false;
-	}
-	bool isleader = false;
-	Replica newReplica = findUpReplicaOnOneSeg(range, sp->targetSegID, &isleader);
-	if (newReplica == NULL)
-		return true;
+	// /* TODO: we need to control the We also need to deal with concurrency conflicts. */
+	// RangeDesc range = findUpRangeRoute(sp->range->endkey);
+	// /*
+	//  * If the rangeid found through the route is not the same as planned. This is a mistake.
+	//  */
+	// if (range.rangeID != sp->range->rangeID)
+	// {
+	// 	ereport(WARNING,
+	// 		(errmsg("route find the range id %d is different from range %d",
+	// 			range.rangeID, sp->range->rangeID)));
+	// 	return false;
+	// }
+	// bool isleader = false;
+	// Replica newReplica = findUpReplicaOnOneSeg(range, sp->targetSegID, &isleader);
+	// if (newReplica == NULL)
+	// 	return true;
 
-	RangeDesc range_desc = findUpRangeDescByID(sp->range->rangeID);
+	// RangeDesc range_desc = findUpRangeDescByID(sp->range->rangeID);
 
-	RemoveReplicaToRange(&range, sp->targetSegID);
-	if (range_desc.rangeID == sp->range->rangeID && GpIdentity.segindex != sp->targetSegID)
-	{
-		storeNewRangeDesc(range);
+	// RemoveReplicaToRange(&range, sp->targetSegID);
+	// if (range_desc.rangeID == sp->range->rangeID && GpIdentity.segindex != sp->targetSegID)
+	// {
+	// 	storeNewRangeDesc(range);
 
-		int new_id = FindRangeStatisticsByRangeID(range.rangeID);
-		InitRangeStatistics(range, new_id);
-	}
+	// 	int new_id = FindRangeStatisticsByRangeID(range.rangeID);
+	// 	InitRangeStatistics(range, new_id);
+	// }
 
-	findUpReplicaOnThisSeg(range, &isleader);
-	if (isleader)
-	{
-		Rangeengine_remove_replica(range.rangeID, sp->targetSegID);
-	}
-	if (GpIdentity.segindex == sp->targetSegID)
-	{
-		removeRangeDesc(range);
-		bool result = Rangeengine_remove_paxos(range.rangeID);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("PAXOS: remove range %d replica on %d result = %d",
-					range.rangeID, sp->targetSegID, result)));
-	}
-	storeNewRangeRoute(range);
+	// findUpReplicaOnThisSeg(range, &isleader);
+	// if (isleader)
+	// {
+	// 	Rangeengine_remove_replica(range.rangeID, sp->targetSegID);
+	// }
+	// if (GpIdentity.segindex == sp->targetSegID)
+	// {
+	// 	removeRangeDesc(range);
+	// 	bool result = Rangeengine_remove_paxos(range.rangeID);
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("PAXOS: remove range %d replica on %d result = %d",
+	// 				range.rangeID, sp->targetSegID, result)));
+	// }
+	// storeNewRangeRoute(range);
 	return true;
 }
 
 static void
 HanldeMSRemoveReplica(const char *messagetype, RemoveReplicaPlan sp, int planid)
 {
-	bool result = ExecRemoveReplica(sp);
-	if (!result)
-	{
-		StringInfoData buf;
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// bool result = ExecRemoveReplica(sp);
+	// if (!result)
+	// {
+	// 	StringInfoData buf;
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_REMOVEREPLICA_FAILED, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_REMOVEREPLICA_FAILED, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-			(errmsg("send MS response type: %d", MS_REMOVEREPLICA_FAILED)));
-	}
-	else
-	{
-		StringInfoData buf;
+	// 	EndCommand(messagetype, DestRemote);
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 		(errmsg("send MS response type: %d", MS_REMOVEREPLICA_FAILED)));
+	// }
+	// else
+	// {
+	// 	StringInfoData buf;
 
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_REMOVEREPLICA_SUCCESS, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_REMOVEREPLICA_SUCCESS, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
+	// 	EndCommand(messagetype, DestRemote);
 
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_REMOVEREPLICA_SUCCESS)));
-	}
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("send MS response type: %d", MS_REMOVEREPLICA_SUCCESS)));
+	// }
 }
 
 bool
 ExecRebalance(RebalancePlan sp)
 {
-	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
-	RangeDesc range = findUpRangeRoute(sp->rebalance_range->endkey);
-	/*
-	 * If the rangeid found through the route is not the same as planned. This is a mistake.
-	 */
-	if (range.rangeID != sp->rebalance_range->rangeID)
-	{
-		ereport(WARNING,
-			(errmsg("route find the range id %d is different from range %d",
-				range.rangeID, sp->rebalance_range->rangeID)));
-		return false;
-	}
-	RangeDesc range_desc = findUpRangeDescByID(sp->rebalance_range->rangeID);
+	// /* TODO: we need to control the We also need to deal with concurrency conflicts. */
+	// RangeDesc range = findUpRangeRoute(sp->rebalance_range->endkey);
+	// /*
+	//  * If the rangeid found through the route is not the same as planned. This is a mistake.
+	//  */
+	// if (range.rangeID != sp->rebalance_range->rangeID)
+	// {
+	// 	ereport(WARNING,
+	// 		(errmsg("route find the range id %d is different from range %d",
+	// 			range.rangeID, sp->rebalance_range->rangeID)));
+	// 	return false;
+	// }
+	// RangeDesc range_desc = findUpRangeDescByID(sp->rebalance_range->rangeID);
 
-	bool isleader = false;
-	Replica newReplica = findUpReplicaOnOneSeg(range, sp->targetSegID, &isleader);
-	Replica oldReplica = findUpReplicaOnOneSeg(range, sp->sourceSegID, &isleader);
+	// bool isleader = false;
+	// Replica newReplica = findUpReplicaOnOneSeg(range, sp->targetSegID, &isleader);
+	// Replica oldReplica = findUpReplicaOnOneSeg(range, sp->sourceSegID, &isleader);
 
-	Replica leader = findUpLeader(range);
-	Replica replica = CreateNewReplica(range.replica_num, sp->targetSegID, leader->replicaID);
-	replica->replica_state = follower_working;
-	if (newReplica == NULL)
-		AddReplicaToRange(&range, replica);
-	if (oldReplica != NULL)
-		RemoveReplicaToRange(&range, sp->sourceSegID);
+	// Replica leader = findUpLeader(range);
+	// Replica replica = CreateNewReplica(range.replica_num, sp->targetSegID, leader->replicaID);
+	// replica->replica_state = follower_working;
+	// if (newReplica == NULL)
+	// 	AddReplicaToRange(&range, replica);
+	// if (oldReplica != NULL)
+	// 	RemoveReplicaToRange(&range, sp->sourceSegID);
 
-	if ((range_desc.rangeID == sp->rebalance_range->rangeID || GpIdentity.segindex == sp->targetSegID) &&
-			GpIdentity.segindex != sp->sourceSegID)
-	{
-		storeNewRangeDesc(range);
-		int new_id = FindRangeStatisticsByRangeID(range.rangeID);
-		InitRangeStatistics(range, new_id);
-	}
+	// if ((range_desc.rangeID == sp->rebalance_range->rangeID || GpIdentity.segindex == sp->targetSegID) &&
+	// 		GpIdentity.segindex != sp->sourceSegID)
+	// {
+	// 	storeNewRangeDesc(range);
+	// 	int new_id = FindRangeStatisticsByRangeID(range.rangeID);
+	// 	InitRangeStatistics(range, new_id);
+	// }
 
-	findUpReplicaOnThisSeg(range, &isleader);
-	if (isleader)
-	{
-		bool result = Rangeengine_add_replica(range.rangeID, sp->targetSegID);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("PAXOS: leader add range %d replica on seg %d result = %d",
-					range.rangeID, sp->targetSegID, result)));
-		result = Rangeengine_remove_replica(range.rangeID, sp->targetSegID);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("PAXOS: remove range %d replica on %d result = %d",
-					range.rangeID, sp->sourceSegID, result)));
-	}
-	if (GpIdentity.segindex == sp->targetSegID)
-	{
-		SegmentID* seglist = getRangeSegID(range);
-		bool result = Rangeengine_create_paxos(range.rangeID, seglist,
-								range.replica_num);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("PAXOS: add range %d replica on seg %d result = %d",
-					range.rangeID, sp->targetSegID, result)));
-	}
-	if (GpIdentity.segindex == sp->sourceSegID)
-	{
-		removeRangeDesc(range);
-		bool result = Rangeengine_remove_paxos(range.rangeID);
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("PAXOS: remove range %d replica on %d result = %d",
-					range.rangeID, sp->sourceSegID, result)));
-	}
-	storeNewRangeRoute(range);
+	// findUpReplicaOnThisSeg(range, &isleader);
+	// if (isleader)
+	// {
+	// 	bool result = Rangeengine_add_replica(range.rangeID, sp->targetSegID);
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("PAXOS: leader add range %d replica on seg %d result = %d",
+	// 				range.rangeID, sp->targetSegID, result)));
+	// 	result = Rangeengine_remove_replica(range.rangeID, sp->targetSegID);
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("PAXOS: remove range %d replica on %d result = %d",
+	// 				range.rangeID, sp->sourceSegID, result)));
+	// }
+	// if (GpIdentity.segindex == sp->targetSegID)
+	// {
+	// 	SegmentID* seglist = getRangeSegID(range);
+	// 	bool result = Rangeengine_create_paxos(range.rangeID, seglist,
+	// 							range.replica_num);
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("PAXOS: add range %d replica on seg %d result = %d",
+	// 				range.rangeID, sp->targetSegID, result)));
+	// }
+	// if (GpIdentity.segindex == sp->sourceSegID)
+	// {
+	// 	removeRangeDesc(range);
+	// 	bool result = Rangeengine_remove_paxos(range.rangeID);
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("PAXOS: remove range %d replica on %d result = %d",
+	// 				range.rangeID, sp->sourceSegID, result)));
+	// }
+	// storeNewRangeRoute(range);
 	return true;
 }
 
 static void
 HanldeMSRebalance(const char *messagetype, RebalancePlan sp, int planid)
 {
-	bool result = ExecRebalance(sp);
-	if (!result)
-	{
-		StringInfoData buf;
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// bool result = ExecRebalance(sp);
+	// if (!result)
+	// {
+	// 	StringInfoData buf;
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_REMOVEREPLICA_FAILED, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_REMOVEREPLICA_FAILED, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-			(errmsg("send MS response type: %d", MS_REMOVEREPLICA_FAILED)));
-		return;
-	}
-	else
-	{
-		StringInfoData buf;
+	// 	EndCommand(messagetype, DestRemote);
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 		(errmsg("send MS response type: %d", MS_REMOVEREPLICA_FAILED)));
+	// 	return;
+	// }
+	// else
+	// {
+	// 	StringInfoData buf;
 
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_REBALANCE_SUCCESS, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_REBALANCE_SUCCESS, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
+	// 	EndCommand(messagetype, DestRemote);
 
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_REBALANCE_SUCCESS)));
-	}
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("send MS response type: %d", MS_REBALANCE_SUCCESS)));
+	// }
 }
 
 bool
 ExecTransferLeader(TransferLeaderPlan sp)
 {
-   	/* TODO: we need to control the We also need to deal with concurrency conflicts. */
-	RangeDesc range = findUpRangeRoute(sp->range->endkey);
-	/*
-	 * If the rangeid found through the route is not the same as planned. This is a mistake.
-	 */
-	if (range.rangeID != sp->range->rangeID)
-	{
-		ereport(WARNING,
-			(errmsg("route find the range id %d is different from range %d",
-				range.rangeID, sp->range->rangeID)));
-		return false;
-	}
-	RangeDesc range_desc = findUpRangeDescByID(sp->range->rangeID);
+   	// /* TODO: we need to control the We also need to deal with concurrency conflicts. */
+	// RangeDesc range = findUpRangeRoute(sp->range->endkey);
+	// /*
+	//  * If the rangeid found through the route is not the same as planned. This is a mistake.
+	//  */
+	// if (range.rangeID != sp->range->rangeID)
+	// {
+	// 	ereport(WARNING,
+	// 		(errmsg("route find the range id %d is different from range %d",
+	// 			range.rangeID, sp->range->rangeID)));
+	// 	return false;
+	// }
+	// RangeDesc range_desc = findUpRangeDescByID(sp->range->rangeID);
 
-	Replica leader = findUpLeader(range);
-	Replica newLeader = findUpReplicaByReplicaID(range, sp->targetID);
-	if (newLeader == NULL)
-	{
-		ereport(WARNING,
-			(errmsg("The current replicaid %d is invalid.",
-				sp->targetID)));
-		return false;
-	}
-	if (leader->replicaID == sp->targetID)
-	{
-		ereport(WARNING,
-			(errmsg("The current replica %d is already leader and does not need to be modified.",
-				newLeader->replicaID)));
-		return true;
-	}
-	TransferLeader(&range, sp->targetID);
+	// Replica leader = findUpLeader(range);
+	// Replica newLeader = findUpReplicaByReplicaID(range, sp->targetID);
+	// if (newLeader == NULL)
+	// {
+	// 	ereport(WARNING,
+	// 		(errmsg("The current replicaid %d is invalid.",
+	// 			sp->targetID)));
+	// 	return false;
+	// }
+	// if (leader->replicaID == sp->targetID)
+	// {
+	// 	ereport(WARNING,
+	// 		(errmsg("The current replica %d is already leader and does not need to be modified.",
+	// 			newLeader->replicaID)));
+	// 	return true;
+	// }
+	// TransferLeader(&range, sp->targetID);
 
-	if (range_desc.rangeID == sp->range->rangeID)
-	{
-		storeNewRangeDesc(range);
-	}
+	// if (range_desc.rangeID == sp->range->rangeID)
+	// {
+	// 	storeNewRangeDesc(range);
+	// }
 
-	storeNewRangeRoute(range);
+	// storeNewRangeRoute(range);
 	return true;
 }
 
 static void
 HanldeMSTransferLeader(const char *messagetype, TransferLeaderPlan sp, int planid)
 {
-	bool result = ExecTransferLeader(sp);
-	if (!result)
-	{
-		StringInfoData buf;
+	// bool result = ExecTransferLeader(sp);
+	// if (!result)
+	// {
+	// 	StringInfoData buf;
 
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_TRANSFERLEADER_FAILED, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_TRANSFERLEADER_FAILED, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
+	// 	EndCommand(messagetype, DestRemote);
 
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_TRANSFERLEADER_FAILED)));
-	}
-	else
-	{
-		StringInfoData buf;
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("send MS response type: %d", MS_TRANSFERLEADER_FAILED)));
+	// }
+	// else
+	// {
+	// 	StringInfoData buf;
 
-		initStringInfo(&buf);
-		BeginCommand(messagetype, DestRemote);
+	// 	initStringInfo(&buf);
+	// 	BeginCommand(messagetype, DestRemote);
 
-		/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
-		pq_beginmessage(&buf, 'M');
-		pq_sendint(&buf, MS_TRANSFERLEADER_SUCCESS, 4);
-		pq_sendint(&buf, planid, 4);
-		pq_endmessage(&buf);
+	// 	/* TEST: In cases where you have not yet connected to part of the paxos code, it is first assumed that the increase fails */
+	// 	pq_beginmessage(&buf, 'M');
+	// 	pq_sendint(&buf, MS_TRANSFERLEADER_SUCCESS, 4);
+	// 	pq_sendint(&buf, planid, 4);
+	// 	pq_endmessage(&buf);
 
-		EndCommand(messagetype, DestRemote);
+	// 	EndCommand(messagetype, DestRemote);
 
-		pq_flush();
-		if (MSPLAN_EXEC_LOG)
-			ereport(LOG,
-				(errmsg("send MS response type: %d", MS_TRANSFERLEADER_SUCCESS)));
-	}
+	// 	pq_flush();
+	// 	if (MSPLAN_EXEC_LOG)
+	// 		ereport(LOG,
+	// 			(errmsg("send MS response type: %d", MS_TRANSFERLEADER_SUCCESS)));
+	// }
 }
 
 void
-HandleMSMessage(char* query_string)
+HandleMSMessage(char* query_string, int length)
 {
 	Assert(strncmp(query_string, M_S_MSG_PLAN,
 				strlen(M_S_MSG_PLAN)) == 0);
-    char* query = palloc0(strlen(query_string));
-    memcpy(query, query_string, strlen(query_string));
+    char* query = palloc0(length);
+    memcpy(query, query_string, length);
 	char* temp = query + strlen(M_S_MSG_PLAN);
 
 	RangePlan rp = (RangePlan)temp;

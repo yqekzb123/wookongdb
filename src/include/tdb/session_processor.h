@@ -55,7 +55,7 @@ typedef struct KVEngineAttachQueueControl
 
 extern KVEngineAttachQueueControl *attachQueueControl;
 
-typedef struct KVEngineMQHandleData
+typedef struct
 {
 	Node 			node_head;
 	shm_mq_handle	*req_handle;

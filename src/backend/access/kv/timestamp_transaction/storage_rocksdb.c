@@ -10,7 +10,6 @@
 #include "tdb/kvengine.h"
 #include "tdb/range.h"
 #include "tdb/rocks_engine.h"
-#include "paxos/paxos_for_c_include.h"
 #include "tdb/paxos_message.h"
 #include "tdb/route.h"
 #include "tdb/rangecache.h"
@@ -214,20 +213,7 @@ kvengine_optprocess_put_req(RequestHeader *req)
 	}
 	else
 	{
-		if (enable_paxos)
-		{
-			int length = 0;
-			void *req = TransferMsgToPaxos(PAXOS_RUN_PUT, key, value,
-										   put_req->rangeid, &length);
-			int result = 0;
-			if (put_req->rangeid > 0 && put_req->rangeid < MAXRANGECOUNT)
-				result = paxos_storage_runpaxos(req, length, put_req->rangeid);
-			else
-				txn->put(txn, key, value, ROCKS_DEFAULT_CF_I);
-			range_free(req);
-		}
-		else
-			txn->put(txn, key, value, ROCKS_DEFAULT_CF_I);
+        txn->put(txn, key, value, ROCKS_DEFAULT_CF_I);
 		put_res->checkUnique = true;
 	}
 	// TODO:maintain the DTA message 
@@ -756,8 +742,6 @@ kvengine_optprocess_commit(RequestHeader *req)
 		acquire_txnengine_mutex(txn);
 		bool result = txn->commit_and_destroy(txn, req->gxid, req->commit_ts);
 		res->success = result;
-		if (enable_paxos)
-			paxos_storage_commit_batch(req->gxid);
 	}
 	// TODO: check if batch_engine create fail and add the return value of commit operation.
 	return res;
@@ -777,8 +761,6 @@ kvengine_optprocess_abort(RequestHeader *req)
 		set_txnengine_ts(txn, req->lower_lts, req->upper_lts);
 		acquire_txnengine_mutex(txn);
 		txn->abort_and_destroy(txn, req->gxid);
-		if (enable_paxos)
-			paxos_storage_commit_batch(req->gxid);
 	}
 	// TODO: check if batch_engine create fail and add the return value of commit operation.
 	return res;

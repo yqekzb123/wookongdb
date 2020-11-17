@@ -8,7 +8,7 @@
  * Portions Copyright (c) 2019-present Tencent [hongyaozhao], Inc.
  *
  * IDENTIFICATION
- *	    src/backend/ms/mssender.c
+ *		src/backend/ms/mssender.c
  *
  *-------------------------------------------------------------------------
  */
@@ -235,7 +235,7 @@ msConnect(ms_context *context)
 		{
 			case MS_HANDLING:
 				/*
-				 * We always default to false.  If connect fails due to recovery in progress
+				 * We always default to false. If connect fails due to recovery in progress
 				 * this variable will be set based on LSN value in error message.
 				 */
 				msInfo->recovery_making_progress = false;
@@ -822,6 +822,31 @@ HandleSingleSegResponse(MsResultNode ms_result_node, ms_node_info *msInfo, ms_co
 	}
 }
 
+static void
+free_ms_node(MsResultNode ms_result_node)
+{
+	if (ms_result_node->ms_result &&
+		ms_result_node->ms_type == 4 /*MS_SPLIT_PREPARE*/)
+	{
+		SplitPreparePlan sp = (SplitPreparePlan)ms_result_node->ms_result;
+		for (int i = 0; i < sp->split_range->replica_num; i++)
+		{
+			free(sp->split_range->replica[i]);
+		}
+		free(sp->split_range->replica);
+		free(ms_result_node->ms_result);
+	}
+	else if (ms_result_node->ms_result) free(ms_result_node->ms_result);
+	if (ms_result_node->rangelist) free(ms_result_node->rangelist);
+}
+// static void
+// free_ms_list(PGconn *conn)
+// {
+// 	for (int i = 0; i < conn->result_num; i++)
+// 	{
+		
+// 	}
+// }
 /*
  * Record FTS handler's response from libpq result into fts_result
  */
@@ -837,6 +862,7 @@ HandleSegResponse(ms_node_info *msInfo, ms_context *context, PGresult *result)
 			{
 				MsResultNode ms_result_node = result->ms_result_list[i];
 				HandleSingleSegResponse(ms_result_node, msInfo, context);
+				free_ms_node(ms_result_node);
 				free(ms_result_node);
 			}
 		}
@@ -1087,7 +1113,7 @@ ms_complete_check:
 		{
 			RangePlan rp = (RangePlan)list_nth(context->rangeplanlist, i);
 			max_retry_time = max_retry_time > rp->retry_time[msInfo->cdbinfo->config->segindex] ?
-                        max_retry_time : rp->retry_time[msInfo->cdbinfo->config->segindex];
+						max_retry_time : rp->retry_time[msInfo->cdbinfo->config->segindex];
 			all_send = all_send && rp->send_type[msInfo->cdbinfo->config->segindex];
 			all_receive = all_receive && rp->complete_type[msInfo->cdbinfo->config->segindex];
 			result = result && (rp->ms_plan_type == MS_HEART_BEAT || rp->ms_plan_type == MS_SPLIT_COMPLETE || MS_COMPLETE);
@@ -1203,7 +1229,7 @@ MSWalRepInitProbeContext(CdbComponentDatabases *cdbs, ms_context *context)
 	HeartBeatPlan rp = palloc0(sizeof(HeartBeatPlanDesc));
 	initRangePlanHead((RangePlan)rp, MS_HEART_BEAT);
 	rp->segnum = cdbs->total_segments;
-    int index = 0;
+	int index = 0;
 	for(; cdb_index < cdbs->total_segment_dbs; cdb_index++)
 	{
 		CdbComponentDatabaseInfo *primary = &(cdbs->segment_db_info[cdb_index]);
@@ -1246,7 +1272,7 @@ MSWalRepInitProbeContext(CdbComponentDatabases *cdbs, ms_context *context)
 static void
 InitPollFds(size_t size)
 {
-	PollFds = (struct pollfd *) palloc0(size * sizeof(struct pollfd));
+	PollFds = palloc0(size * sizeof(struct pollfd));
 }
 
 bool

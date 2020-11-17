@@ -35,6 +35,7 @@ getRootRangeLevel()
     TupleKey rrlkey = (TupleKey)palloc(sizeof(TupleKeyData));
     rrlkey->rel_id = ROOTRANGELEVEL;
     rrlkey->indexOid = ROOTRANGELEVEL;
+    rrlkey->type = GTS_KEY;
     memset(rrlkey->other_data, 0, 3);
 
     TupleKeySlice key = {rrlkey, sizeof(TupleKeyData)};
@@ -64,6 +65,7 @@ putRootRangeLevel(int RootRangeLevel)
     TupleKey rrlkey = (TupleKey)palloc0(sizeof(TupleKeyData));
     rrlkey->rel_id = ROOTRANGELEVEL;
     rrlkey->indexOid = ROOTRANGELEVEL;
+    rrlkey->type = GTS_KEY;
     memset(rrlkey->other_data, 0, 3);
     TupleKeySlice key = {rrlkey, sizeof(TupleKeyData)};
 
@@ -91,26 +93,26 @@ putRootRangeLevel(int RootRangeLevel)
     pfree(rrlvalue);
 }
 
-char*
+char *
 TransferRangeDescToBuffer(RangeDesc range, Size *length)
 {
     Size rangeStartAndEndKeyLength = range.startkey.len + range.endkey.len + sizeof(Size);
     Size rangeSize = sizeof(RangeDesc) + sizeof(ReplicaDesc) * range.replica_num + rangeStartAndEndKeyLength;
-    char *rangebuffer = (char*)palloc0(rangeSize);
+    void *rangebuffer = palloc0(rangeSize);
 
-    memcpy(rangebuffer, (char*)&range, sizeof(RangeDesc));
-    char *temp = rangebuffer + sizeof(RangeDesc);
-    for (int i = 0; i < range.replica_num; i++)
+    memcpy(rangebuffer, (void *)&range, sizeof(RangeDesc));
+    char *temp = (char *)rangebuffer + sizeof(RangeDesc);
+    int i;
+    for (i = 0; i < range.replica_num; ++i)
     {
-        memcpy(temp, (char*)range.replica[i], sizeof(ReplicaDesc));
-        temp += sizeof(ReplicaDesc);
+        memcpy(temp, range.replica[i], sizeof(ReplicaDesc));
+        temp = (char *)temp + sizeof(ReplicaDesc);
     }
 
-    //temp = temp + sizeof(ReplicaDesc) * range.replica_num;
-    memcpy(temp, (char*)range.startkey.data, range.startkey.len);
+    memcpy(temp, range.startkey.data, range.startkey.len);
 
-    temp = temp + range.startkey.len;
-    memcpy(temp, (char*)range.endkey.data, range.endkey.len);
+    temp = (char *)temp + range.startkey.len;
+    memcpy(temp, range.endkey.data, range.endkey.len);
 
     *length = rangeSize;
     return rangebuffer;

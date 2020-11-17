@@ -17,19 +17,13 @@ all: pg_config.h pg_config_ext.h pg_config_os.h check_oids
 
 
 # Subdirectories containing headers for server-side dev
-SUBDIRS = access bootstrap catalog commands common datatype \
-	executor fe_utils foreign \
-	lib libpq mb nodes optimizer parser postmaster regex replication \
-	rewrite storage tcop snowball snowball/libstemmer tsearch \
-	tsearch/dicts utils port port/atomics port/win32 port/win32_msvc \
-	port/win32_msvc/sys port/win32/arpa port/win32/netinet \
-	port/win32/sys portability
-
-SUBDIRS += cdb gpmon
-
-SUBDIRS += tdb tdb/pg_transaction tdb/timestamp_transaction rocksdb
-
-SUBDIRS += paxos libtcp
+SUBDIRS = access bootstrap catalog cdb commands common datatype executor \
+	fe_utils foreign fstream gpmon gpopt gppc lib libpq librw libtcp mb \
+	nodes optimizer parser port port/atomics port/win32 port/win32_msvc \
+	port/win32_msvc/sys port/win32/arpa port/win32/netinet port/win32/sys \
+	portability postmaster regex replication rewrite rocksdb rstorage \
+	snowball storage tcop tdb tdb/pg_transaction tdb/timestamp_transaction \
+	tsearch utils snowball snowball/libstemmer tsearch tsearch/dicts utils 
 
 # Install all headers
 install: all installdirs

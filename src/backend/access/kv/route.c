@@ -16,7 +16,9 @@
 #include "tdb/tdbkvam.h"
 #include "tdb/route.h"
 #include "tdb/rangestatistics.h"
+#include "tdb/rangecache.h"
 #include "cdb/cdbvars.h"
+#include "need_paxos.h"
 
 static RangeDesc route_scan_get_next(KVEngineScanDesc scan);
 
@@ -46,6 +48,7 @@ makeRouteKey(TupleKeySlice sourcekey, bool *getkey)
 	TupleKey source = (TupleKey)palloc0(sizeof(TupleKeyData) + sourcekey.len + sizeof(Size));
 	source->rel_id = metalevel;
 	source->indexOid = metalevel;
+	source->type = GTS_KEY;
 	set_TupleKeyData_all_value(source, sourcekey.data, sourcekey.len);
 	set_TupleKeyData_pk_value_len(source, sourcekey.len, sourcekey.len);
 
@@ -67,6 +70,7 @@ storeNewRangeRoute(RangeDesc range)
 	TupleKeySlice rangekey = makeRouteKey(range.endkey, &getkey);
 	if (getkey)
 	{
+        need_paxos = 0;
 		//kvengine_check_unique_and_insert(NULL, rangekey, rangevalue, -1, false);
 		kvengine_send_put_req(rangekey, rangevalue, -1, false, false, NULL);
 		if (GpIdentity.segindex >= 0)
@@ -163,6 +167,9 @@ checkKeyInRange(TupleKeySlice sourcekey, RangeDesc rangeroute)
 RangeDesc
 findUpRangeRoute(TupleKeySlice sourcekey)
 {
+	RangeDesc* rangecache = FindRangeRouteByKey(sourcekey);
+	if (rangecache != NULL)
+		return *rangecache;
 	RangeDesc rangeroute = initVoidRangeDesc();
 	bool getRoute = false;
 	TupleKeySlice routekey = makeRouteKey(sourcekey, &getRoute);

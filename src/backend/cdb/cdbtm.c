@@ -2158,7 +2158,14 @@ performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound)
 			kvengine_commit();
 		}
 	}
-		
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		if (transam_mode != TRANSAM_MODE_DEFAULT || transaction_type == KVENGINE_TRANSACTIONDB)
+		{
+			kvengine_commit();
+		}
+	}
+
 	/*
 	 * Since this call may fail, lets setup a handler.
 	 */

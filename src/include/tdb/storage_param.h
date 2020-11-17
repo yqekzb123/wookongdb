@@ -18,7 +18,8 @@
 #define new_delete
 #define MAX_HASH_KEY_LEN (128 * 1024)
 #define USE_SPIN_LOCK
-
+// #define PRINT_PAXOS_MSG
+extern FILE *logfile;
 extern MemoryContext TxnRWSetContext;
 typedef struct StorageThreadLockData
 {
@@ -86,8 +87,6 @@ extern bool enable_req_failed_retry;
 extern bool memorycontext_lock;
 extern bool enable_paxos;
 extern bool enable_range_distribution;
-extern int *StoragePort;
-extern int PortNum;
 
 extern bool am_kv_storage;
 #ifndef USE_SPIN_LOCK
@@ -173,6 +172,4 @@ extern void InitThreadHaveLock(void);
 extern void destroyThreadLock(void);
 extern void destroyThreadHaveLock(void);
 
-extern void StoragePaxosPortShmemInit(void);
-extern Size StoragePaxosPortShmemSize(void);
 #endif

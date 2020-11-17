@@ -27,6 +27,7 @@
 #include "tdb/range_struct.h"
 #include "cdb/cdbvars.h"
 #include "tdb/rangecache.h"
+#include "need_paxos.h"
 
 int RootRangeLevel = 1;
 RangeID Rangeidvalue = 0;
@@ -93,25 +94,27 @@ compareReplica(RangeDesc a, RangeDesc b)
 TupleKeySlice
 makeRangeDescKey(RangeID rangeID)
 {
-	TupleKey rangekey = (TupleKey)palloc(sizeof(TupleKeyData));
+	TupleKey rangekey = (TupleKey)palloc0(sizeof(TupleKeyData));
 	rangekey->rel_id = RANGEDESC;
 	rangekey->indexOid = rangeID;
+	rangekey->type = GTS_KEY;
 	MemSet(rangekey->other_data, 0, 4);
 	TupleKeySlice key = {rangekey, sizeof(TupleKeyData)};
 	return key;
 }
 
 RangeDesc
-CreateNewRangeDesc(RangeID rangeID, TupleKeySlice startkey, TupleKeySlice endkey, Replica *replica, int replica_num)
+CreateNewRangeDesc(RangeID rangeID, TupleKeySlice startkey, TupleKeySlice endkey, Replica *replicas, int replica_num)
 {
 	RangeDesc range = initVoidRangeDesc();
 	range.rangeID = rangeID;
 	range.startkey = startkey;
 	range.endkey = endkey;
 	range.version = 0;
-	range.replica = replica;
+	range.replica = replicas;
 	range.replica_num = replica_num;
-	for (int i = 0; i < range.replica_num; i++)
+	int i;
+	for (i = 0; i < range.replica_num; ++i)
 	{
 		/* Since there are no more copies at the moment, pretend to have held an election here */
 		range.replica[i]->LeaderReplicaID = 0;
@@ -126,7 +129,7 @@ CreateNewRangeDesc(RangeID rangeID, TupleKeySlice startkey, TupleKeySlice endkey
 Replica
 CreateNewReplica(ReplicaID replicaID, SegmentID segmentID, ReplicaID leader)
 {
-	Replica replica = (Replica)palloc0(sizeof(ReplicaDesc));
+	Replica replica = palloc0(sizeof(ReplicaDesc));
 	replica->LeaderReplicaID = leader;
 	replica->replicaID = replicaID;
 	replica->segmentID = segmentID;
@@ -149,7 +152,6 @@ AddReplicaToRange(RangeDesc *range, Replica replica)
 	replicas[range->replica_num] = replica;
 	range->replica_num++;
 	range->replica = replicas;
-	return;
 }
 
 void
@@ -172,7 +174,6 @@ RemoveReplicaToRange(RangeDesc *range, SegmentID targetseg)
 	pfree(range->replica);
 	range->replica_num--;
 	range->replica = replicas;
-	return;
 }
 
 void
@@ -196,27 +197,12 @@ TransferLeader(RangeDesc *range, ReplicaID targetreplica)
 RangeDesc
 initNewTableRangeDesc(Relation relation, RangeID rangeid, SegmentID *replica_segid, int replicanum)
 {
-	int RN = 0;
-	SegmentID *segid;
-	if (replicanum != 0)
-	{
-		segid = replica_segid;
-		RN = replicanum;
-	}
-	else
-	{
-
-		segid = GetBestTargetSegmentList(DEFAULT_REPLICA_NUM);
-		RN = DEFAULT_REPLICA_NUM;
-	}
+	int RN = replicanum != 0 ? replicanum : DEFAULT_REPLICA_NUM, i;
+	SegmentID *segid = replicanum != 0 ? replica_segid : GetBestTargetSegmentList(DEFAULT_REPLICA_NUM);
 	/* there we need to know all of the segments in this cluster */
-	Replica *replicas = (Replica*)palloc0(sizeof(Replica) * RN);
-	RangeID rangeID;
-	if (rangeid == UNVALID_RANGE_ID)
-		rangeID = getMaxRangeID();
-	else
-		rangeID = rangeid;
-	for (int i = 0; i < RN; i++)
+	Replica *replicas = palloc0(sizeof(Replica) * RN);
+	RangeID rangeID = rangeid == UNVALID_RANGE_ID ? getMaxRangeID() : rangeid;
+	for (i = 0; i < RN; i++)
 	{
 		Replica replica = CreateNewReplica(i, segid[i], UNVALID_REPLICA_ID);
 		replicas[i] = replica;
@@ -228,8 +214,8 @@ initNewTableRangeDesc(Relation relation, RangeID rangeid, SegmentID *replica_seg
 	TupleKeySlice startKey = build_key(initkey);
 	initkey.isend = true;
 	TupleKeySlice endKey = build_key(initkey);
-
 	RangeDesc range = CreateNewRangeDesc(rangeID, startKey, endKey, replicas, RN);
+
 	return range;
 }
 
@@ -255,6 +241,7 @@ storeNewRangeDesc(RangeDesc range)
 
 	TupleKeySlice rangekey = makeRangeDescKey(range.rangeID);
 	//kvengine_check_unique_and_insert(NULL, rangekey, rangevalue, -1, false);
+    need_paxos = 0;
 	kvengine_send_put_req(rangekey, rangevalue, -1, false, false, NULL);
 
 	/* gp_role need to add a m-s role */
@@ -484,13 +471,13 @@ List*
 ScanAllRange(void)
 {
 	TupleKeySlice minkey = makeRangeDescKey(UNVALID_RANGE_ID);
-    TupleKeySlice *minkeyp = palloc0(sizeof(TupleKeySlice));
-    minkeyp->data = minkey.data;
-    minkeyp->len = minkey.len;
+	TupleKeySlice *minkeyp = palloc0(sizeof(TupleKeySlice));
+	minkeyp->data = minkey.data;
+	minkeyp->len = minkey.len;
 	TupleKeySlice maxkey = makeRangeDescKey(MAX_RANGE_ID);
-    TupleKeySlice *maxkeyp = palloc0(sizeof(TupleKeySlice));
-    maxkeyp->data = maxkey.data;
-    maxkeyp->len = maxkey.len;
+	TupleKeySlice *maxkeyp = palloc0(sizeof(TupleKeySlice));
+	maxkeyp->data = maxkey.data;
+	maxkeyp->len = maxkey.len;
 	KVEngineScanDesc rangescan = initKVEngineScanDesc(NULL, 0, NULL, minkeyp, maxkeyp, true);
 	List *rangelist = NIL;
 	RangeDesc *temp;

@@ -39,7 +39,7 @@
 #include "tdb/route.h"
 #include "tdb/range.h"
 #include "tdb/storage_param.h"
-
+#include "need_paxos.h"
 #include "tdb/timestamp_transaction/timestamp_generate_key.h"
 #include "tdb/pg_transaction/pgtransaction_generate_key.h"
 #include "storage/lmgr.h"
@@ -113,7 +113,6 @@ ralloc0(Size size)
 void rfree(void *pointer)
 {
 	free(pointer);
-	return;
 }
 
 void range_free(void *pointer)
@@ -121,7 +120,6 @@ void range_free(void *pointer)
 	if (pointer != NULL)
 		pfree(pointer);
 	pointer = NULL;
-	return;
 }
 
 DataSlice *
@@ -183,20 +181,19 @@ save_tuple_key_into_buffer(char *buffer, TupleKeySlice key)
 	*len = key.len;
 	memcpy((void *)(buffer + sizeof(Size)), (void *)(key.data), (key.len));
 }
+
 /*
  * Execution layer sends data
  */
 ResponseHeader *
 send_kv_request(RequestHeader *req)
 {
+    req->need_paxos = need_paxos;
 	ResponseHeader *res = SessionProcessKV(req);
 	//Assert(res->type == req->type);
 	return res;
 }
 
-/*
- *
- */
 HeapTuple
 kvengine_make_fake_heap(TupleKeySlice key, TupleValueSlice value)
 {
@@ -220,7 +217,8 @@ kvengine_make_fake_heap(TupleKeySlice key, TupleValueSlice value)
 	return htup;
 }
 
-void kvengine_free_fake_heap(HeapTuple htup)
+void
+kvengine_free_fake_heap(HeapTuple htup)
 {
 	if (htup == NULL)
 		return;
@@ -243,10 +241,8 @@ void kvengine_free_fake_relation(Relation rel)
 	range_free(rel);
 }
 
-/*
- *
- */
-bool kvengine_judge_dirty(TupleValue value, HeapTuple htup)
+bool
+kvengine_judge_dirty(TupleValue value, HeapTuple htup)
 {
 	bool dirty = false;
 
@@ -302,95 +298,6 @@ kvengine_delete_req(TupleKeySlice key, Snapshot snap)
 		CheckLogicalTsIntervalValid(res->cts, res->nts);
 	}
 	return (ScanResponse *)res;
-}
-
-bool Rangeengine_create_paxos(RangeID rangeid, SegmentID *seglist, int segcount)
-{
-	int length = 0;
-	char *segchar = TransferSegIDToIPPortList(seglist, segcount, &length);
-	SegmentID *currentseg = (SegmentID *)palloc0(sizeof(SegmentID));
-	currentseg[0] = GpIdentity.segindex;
-	int current_length = 1;
-	char *current = TransferSegIDToIPPortList(currentseg, 1, &current_length);
-
-	CreateGroupRequest *req = (CreateGroupRequest *)palloc0(sizeof(CreateGroupRequest) + length);
-	req->groupid = rangeid;
-	SessionSaveTransactionState((RequestHeader *)req);
-	req->header.writebatch = false;
-	req->header.type = CREATEGROUP;
-	req->header.size = sizeof(CreateGroupRequest) + length;
-
-	memcpy(req->MyIPPort, current, current_length);
-	memcpy(req->IPPortList, segchar, length);
-	CreateGroupResponse *res = (CreateGroupResponse *)send_kv_request((RequestHeader *)req);
-	range_free(segchar);
-	range_free(current);
-	range_free(currentseg);
-	range_free(req);
-	return res->success;
-	//return true;
-}
-
-bool Rangeengine_remove_paxos(RangeID rangeid)
-{
-	RemoveGroupRequest *req = (RemoveGroupRequest *)palloc0(sizeof(RemoveGroupRequest));
-	req->groupid = rangeid;
-	SessionSaveTransactionState((RequestHeader *)req);
-	req->header.writebatch = false;
-	req->header.type = REMOVEGROUP;
-	req->header.size = sizeof(RemoveGroupRequest);
-
-	RemoveGroupResponse *res = (RemoveGroupResponse *)send_kv_request((RequestHeader *)req);
-	range_free(req);
-	return res->success;
-}
-
-bool Rangeengine_add_replica(RangeID rangeid, SegmentID segid)
-{
-	SegmentID *currentseg = (SegmentID *)palloc0(sizeof(SegmentID));
-	currentseg[0] = segid;
-	int current_length = 1;
-	char *current = TransferSegIDToIPPortList(currentseg, 1, &current_length);
-
-	AddGroupMemberRequest *req = (AddGroupMemberRequest *)palloc0(sizeof(AddGroupMemberRequest) + current_length);
-	req->groupid = rangeid;
-	SessionSaveTransactionState((RequestHeader *)req);
-	req->header.writebatch = false;
-	req->header.type = ADDGROUPMEMBER;
-	req->header.size = sizeof(AddGroupMemberRequest) + current_length;
-
-	memcpy(req->NodeIPPort, current, current_length);
-
-	AddGroupMemberResponse *res = (AddGroupMemberResponse *)send_kv_request((RequestHeader *)req);
-	range_free(req);
-	range_free(currentseg);
-	range_free(current);
-	return res->success;
-}
-
-bool Rangeengine_remove_replica(RangeID rangeid, SegmentID segid)
-{
-	SegmentID *currentseg = (SegmentID *)palloc0(sizeof(SegmentID));
-	currentseg[0] = segid;
-	int current_length = 1;
-	char *current = TransferSegIDToIPPortList(currentseg, 1, &current_length);
-
-	RemoveGroupMemberRequest *req =
-		(RemoveGroupMemberRequest *)palloc0(sizeof(RemoveGroupMemberRequest) + current_length);
-	req->groupid = rangeid;
-	SessionSaveTransactionState((RequestHeader *)req);
-	req->header.writebatch = false;
-	req->header.type = REMOVEGROUPMEMBER;
-	req->header.size = sizeof(RemoveGroupMemberRequest) + current_length;
-
-	memcpy(req->NodeIPPort, current, current_length);
-
-	RemoveGroupMemberResponse *res =
-		(RemoveGroupMemberResponse *)send_kv_request((RequestHeader *)req);
-	range_free(req);
-	range_free(currentseg);
-	range_free(current);
-	return res->success;
 }
 
 PutResponse *
@@ -1666,11 +1573,14 @@ bool kvengine_commit(void)
 		{
 			update_with_cts(global_tmp_timestamp.commit_ts);
 		}
+
+        need_paxos = true;
 		return true;
 	}
 	else
 	{
 		RollBackCountAdd();
+        need_paxos = true;
 		return false;
 	}
 }

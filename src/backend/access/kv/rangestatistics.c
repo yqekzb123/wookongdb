@@ -33,13 +33,14 @@ static void InitSegmentSatistics(SegmentSatistics* segmentSatistcs,
 					 char** location,
 					 Size*  location_size,
 					 Size   location_level);
-static bool InitStatisticReq(RangeDesc scan, int stat_id);
+static bool InitStatisticReq(RangeDesc range, int stat_id);
 static bool UpdateRangeStatisticsInsert(RangeID targetRangeID, TupleKeySlice key, TupleValueSlice value);
 static void UpdateSegmentStatisticsInsert(TupleKeySlice key, TupleValueSlice value);
 static bool UpdateRangeStatisticsDelete(RangeID targetRangeID, TupleKeySlice key, TupleValueSlice value);
 static void UpdateSegmentStatisticsDelete(TupleKeySlice key, TupleValueSlice value);
 static bool UpdateRangeStatisticsRead(RangeID targetRangeID, TupleKeySlice key, TupleValueSlice value);
 static void UpdateSegmentStatisticsRead(TupleKeySlice key, TupleValueSlice value);
+static void InitRangeStatistics(RangeDesc Range, int stat_id);
 
 int
 FindRangeStatisticsByRangeID(RangeID rangeid)
@@ -64,27 +65,21 @@ Init_Seg_Stat(void)
 	}
 	if (engine == NULL)
 	{
-		ereport(WARNING,(errmsg("engine is null!!!!")));
+		ereport(WARNING,(errmsg("engine is null!")));
 		return;
 	}
 	List *rangelist = kvengine_process_scan_all_range();
-	Size range_length = 0;
+	Size range_length;
 	if (rangelist != NIL)
 	{
 		range_length = list_length(rangelist);
 		ssm_statistics->range_count = range_length;
-
-		for (int i = 0; i < range_length; i++)
+        int i;
+		for (i = 0; i < range_length; i++)
 		{
 			Assert(rangelist != NIL);
-			RangeDesc* range = (RangeDesc*)list_nth(rangelist, i);
+			RangeDesc *range = (RangeDesc *)list_nth(rangelist, i);
 			InitRangeStatistics(*range, i);
-			if (IsRangeIDValid(range->rangeID))
-			{
-				/* Restart all paxos groups when rebooting */
-				SegmentID* seglist = getRangeSegID(*range);
-				Rangeengineprocessor_create_paxos(range->rangeID, seglist, range->replica_num);
-			}
 		}
 	}
 	else
@@ -110,7 +105,7 @@ InitRangeStatistics(RangeDesc Range, int stat_id)
 	if (am_kv_storage)
 	{
 		RangeSatistics *Rangestatis = &ssm_statistics->range_statistics[stat_id];
-		kvengine_process_scan_one_range_all_key(Range.startkey, Range.endkey, Range.rangeID, Rangestatis);
+        kvengine_process_scan_one_range_all_key(Range.startkey, Range.endkey, Range.rangeID, Rangestatis, 2);
 	}
 	else
 		InitStatisticReq(Range, stat_id);
@@ -306,7 +301,7 @@ InitStatisticReq(RangeDesc range, int stat_id)
 	Size size = sizeof(InitStatisticsRequest) + startkey.len + sizeof(Size) + endkey.len + sizeof(Size);
 	InitStatisticsRequest *req = palloc0(size);
 	req->header.size = size;
-	req ->header.type = INIT_STATISTICS;
+	req->header.type = INIT_STATISTICS;
 	req->new_stat_id = stat_id;
 	req->rangeid = range.rangeID;
 	char* temp = req->start_and_end_key;

@@ -5226,8 +5226,8 @@ PostgresMain(int argc, char *argv[],
 						exec_replication_command(query_string);
 					else if (am_ftshandler)
 						HandleFtsMessage(query_string);
-					else if (am_mshandler)
-						HandleMSMessage(query_string);
+					// else if (am_mshandler)
+					// 	HandleMSMessage(query_string, length);
 					else if (IsFaultHandler)
 						HandleFaultMessage(query_string);
 					else
@@ -5249,7 +5249,7 @@ PostgresMain(int argc, char *argv[],
 					pq_getmsgend(&input_message);
 
 					if (am_mshandler)
-						HandleMSMessage(query_string);
+						HandleMSMessage(query_string, length);
 				}
 				break;
             case 'M': /* MPP dispatched stmt from QD */

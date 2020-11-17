@@ -306,7 +306,7 @@ void MSLoop()
 			*/
 			oldContext = MemoryContextSwitchTo(probeContext);
 
-			//updated_probe_state = MSWalRepMessageSegments(cdbs);
+			updated_probe_state = MSWalRepMessageSegments(cdbs);
 
 			MemoryContextSwitchTo(oldContext);
 
@@ -330,7 +330,6 @@ void MSLoop()
 		SpinLockRelease(&ftsProbeInfo->lock);
 
 		/* check if we need to sleep before starting next iteration */
-
 		elapsed = time(NULL) - probe_start_time;
 		timeout = elapsed >= gp_fts_probe_interval ? 0 :
 							gp_fts_probe_interval - elapsed;

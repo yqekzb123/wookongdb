@@ -7,14 +7,13 @@
  * src/include/tdb/bootstraprange.h
  *----------------------------------
  */
-#ifndef BOOTSTRAPRANGE
-#define BOOTSTRAPRANGE
-#include "tdb/range_universal.h"
-#include "tdb/route.h"
+
+#pragma once
+
 #include "tdb/range.h"
+#include "tdb/range_universal.h"
 #include "tdb/rangestatistics.h"
+#include "tdb/route.h"
 
-
-extern void BootstrapInitRange(void);
-extern void BootstrapInitStatistics(void);
-#endif
+void BootstrapInitRange(void);
+void BootstrapInitStatistics(void);

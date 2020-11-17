@@ -116,7 +116,6 @@ rocks_init_optengine_interface(KVEngineInterface* interface)
 {
 	interface->destroy = rocks_optengine_destroy;
     interface->create_txn = open_txnengine_txn;
-
 }
 
 static void
@@ -440,6 +439,10 @@ rocks_transaction_put(KVEngineTransactionInterface* interface,
 
 	rocksdb_transaction_put_cf(txn_engine->PRIVATE_txn, cfh, (char*) key.data, key.len, 
                                                 (char*) value.data, value.len, &err);
+#ifdef PRINT_PAXOS_MSG
+	fprintf(logfile, "keysize:%ld keytype:%c keyrelid:%u keyindex:%u\n", key.len, key.data->type, key.data->rel_id, key.data->indexOid);
+    print_log_file(j);
+#endif
 	if (err)
 	{
 		// ereport(ERROR,

@@ -19,7 +19,6 @@ extern bool UpdateStatisticsRead(RangeID targetRangeID, TupleKeySlice key, Tuple
 extern bool UpdateStatisticsDelete(RangeID targetRangeID, TupleKeySlice key, TupleValueSlice value);
 
 extern void Init_Seg_Stat(void);
-extern void InitRangeStatistics(RangeDesc Range, int stat_id);
 extern bool checkRangeStatistics(RangeDesc Range);
 extern void add_RangeStatistics(RangeDesc rangestat);
 extern void m_s_add_RangeStatistics();

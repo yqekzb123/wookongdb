@@ -165,7 +165,7 @@
 #include "utils/resowner.h"
 #include "utils/sharedsnapshot.h"
 #include "utils/snapmgr.h"
-#include "tdb/storage_param.h"
+
 /*
  * Distributed Snapshot that gets sent in from the QD to processes running
  * in EXECUTE mode.

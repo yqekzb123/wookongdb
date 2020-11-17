@@ -21,34 +21,9 @@ bool enable_dynamic_lock = true;
 bool enable_req_failed_retry = false;
 bool memorycontext_lock = true;
 bool enable_paxos = false;
-bool enable_range_distribution = false;
+bool enable_range_distribution = true;
 StorageThreadLockData StorageThreadLock;
 __thread StorageThreadHaveLock StorageHaveLock;
-
-int *StoragePort = NULL;
-int PortNum = MAXHOSTNAMELEN;
-
-void
-StoragePaxosPortShmemInit(void)
-{
-	bool found;
-	StoragePort = (int*)
-		ShmemInitStruct("StoragePort", sizeof(int) * PortNum, &found);
-	if (!IsUnderPostmaster)
-	{
-		Assert(!found);
-	}
-	else
-	{
-		Assert(found);
-	}
-}
-
-Size
-StoragePaxosPortShmemSize(void)
-{
-	return sizeof(int) * PortNum;
-}
 
 void
 AcquireThreadLock(int id)
@@ -94,12 +69,12 @@ InitThreadLock()
 {
     if (!am_kv_storage)
         return;
-    int lwlocknum = NumLWLocks();
+    int lwlocknum = NumLWLocks(), i;
     StorageThreadLock._Thread_Postgres_Lock = palloc0(sizeof(pthread_mutex_t) * lwlocknum);
     StorageHaveLock.HAVE_Postgres_LOCK = palloc0(sizeof(bool) * lwlocknum);
     StorageThreadLock.lock_count = lwlocknum;
     StorageHaveLock.lock_count = lwlocknum;
-    for (int i = 0; i < lwlocknum; i++)
+    for (i = 0; i < lwlocknum; ++i)
     {
 #ifndef USE_SPIN_LOCK
         pthread_mutex_init (&(StorageThreadLock._Thread_Postgres_Lock[i]), NULL);
@@ -121,7 +96,7 @@ InitTxnLock()
 #ifndef USE_SPIN_LOCK
         pthread_mutex_init (&(StorageThreadLock._Thread_TxnHTAB_Lock[i]), NULL);
 #else
-		SpinLockInit (&(StorageThreadLock._Thread_TxnHTAB_Lock[i]));
+		SpinLockInit(&(StorageThreadLock._Thread_TxnHTAB_Lock[i]));
 #endif
         StorageHaveLock.HAVE_TxnHTAB_LOCK[i] = false;
     }

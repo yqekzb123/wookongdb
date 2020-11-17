@@ -596,11 +596,11 @@ static void check_superuser_connection_limit()
  *		Initialize POSTGRES.
  *
  * The database can be specified by name, using the in_dbname parameter, or by
- * OID, using the dboid parameter.  In the latter case, the actual database
+ * OID, using the dboid parameter. In the latter case, the actual database
  * name can be returned to the caller in out_dbname.  If out_dbname isn't
  * NULL, it must point to a buffer of size NAMEDATALEN.
  *
- * In bootstrap mode no parameters are used.  The autovacuum launcher process
+ * In bootstrap mode no parameters are used. The autovacuum launcher process
  * doesn't use any parameters either, because it only goes far enough to be
  * able to read pg_database; it doesn't connect to any particular database.
  * In walsender mode only username is used.
@@ -1219,7 +1219,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		{
 			/*
 			 * NOTE: This assumes that the Slot has already been
-			 *       allocated by the writer.  Need to make sure we
+			 *       allocated by the writer. Need to make sure we
 			 *       always allocate the writer qExec first.
 			 */			 			
 			lookupSharedSnapshot("Reader qExec", "Writer qExec", gp_session_id);

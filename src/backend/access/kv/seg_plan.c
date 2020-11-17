@@ -15,19 +15,16 @@
 #include "tdb/rangecache.h"
 
 SplitPreparePlan
-seg_check_one_range_split(RangeSatistics rangestat)
-{
+seg_check_one_range_split(RangeSatistics rangestat) {
     SplitPreparePlan sp = palloc0(sizeof(SplitPreparePlanDesc));
     Size rangesize = rangestat.keybytes + rangestat.valuebytes;
     RangeDesc *range = FindRangeDescByRangeID(rangestat.rangeID);
     bool isleader = false;
     findUpReplicaOnThisSeg(*range, &isleader);
-    if (!isleader)
-    {
+    if (!isleader) {
         return NULL;
     }
-    if (rangesize > MAX_RANGE_SIZE)
-    {
+    if (rangesize > MAX_RANGE_SIZE) {
         sp->split_range = palloc0(sizeof(RangeDesc));
         *sp->split_range = findUpRangeDescByID(rangestat.rangeID);
         sp->split_key = getRangeMiddleKey(*sp->split_range, rangesize);
@@ -36,9 +33,7 @@ seg_check_one_range_split(RangeSatistics rangestat)
         sp->new_range_id = UNVALID_RANGE_ID;
         sp->targetSegID = GpIdentity.segindex;
         return sp;
-    }
-    else
-    {
+    } else {
         return NULL;
     }
 }

@@ -15,7 +15,7 @@
 
 extern void freeRangeDescPoints(RangeDesc* range);
 extern void freeRangeDesc(RangeDesc range);
-extern RangeDesc CreateNewRangeDesc(RangeID rangeID, TupleKeySlice startkey, TupleKeySlice endkey, Replica *replica, int replica_num);
+extern RangeDesc CreateNewRangeDesc(RangeID rangeID, TupleKeySlice startkey, TupleKeySlice endkey, Replica *replicas, int replica_num);
 extern Replica CreateNewReplica(ReplicaID replicaID, SegmentID segmentID, ReplicaID leader);
 extern void AddReplicaToRange(RangeDesc *range, Replica replica);
 extern void RemoveReplicaToRange(RangeDesc *range, SegmentID targetseg);

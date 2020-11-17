@@ -10,7 +10,6 @@
 #include "tdb/kvengine.h"
 #include "tdb/range.h"
 #include "tdb/rocks_engine.h"
-#include "paxos/paxos_for_c_include.h"
 #include "tdb/paxos_message.h"
 #include "tdb/route.h"
 #include "tdb/rangecache.h"
@@ -237,10 +236,6 @@ kvengine_ltsprocess_put_req(RequestHeader *req)
 			TupleKeySlice ltskey = add_ltx_label(key);
 			int length = 0;
 			void *req = TransferMsgToPaxos(PAXOS_RUN_PUT, key, value, put_req->rangeid, &length);
-			int result = 0;
-			if (put_req->rangeid > 0 && put_req->rangeid < MAXRANGECOUNT)
-				result = paxos_storage_runpaxos(req, length, put_req->rangeid);
-			else
 				txn->put(txn, ltskey, value, ROCKS_LTS_CF_I);
 			range_free(req);
 			range_free(ltskey.data);
@@ -843,8 +838,6 @@ kvengine_ltsprocess_commit(RequestHeader *req)
 	{
 		bool result = txn->commit_with_lts_and_destroy(txn, req->gxid, req->commit_ts, req->lower_lts);
 		res->success = result;
-		if (enable_paxos)
-			paxos_storage_commit_batch(req->gxid);
 	}
 	// release_txnengine_mutex(txn);
 	// TODO: check if batch_engine create fail and add the return value of commit operation.
@@ -863,8 +856,6 @@ kvengine_ltsprocess_abort(RequestHeader *req)
 	if (txn)
 	{
 		txn->abort_and_destroy(txn, req->gxid);
-		if (enable_paxos)
-			paxos_storage_commit_batch(req->gxid);
 	}
 	// release_txnengine_mutex(txn);
 	// TODO: check if batch_engine create fail and add the return value of commit operation.

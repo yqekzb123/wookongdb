@@ -7,7 +7,6 @@ gpbin=${GPBIN}
 gpcpbin=${GPBINHOME}
 gpcptmp=${GPCOMPILEHOME}
 gpdatap=${GPPRIMARYHOME}
-# gpdatap=(/data1/gptest/penguindb/gpdata/gpdatap1 /data1/gptest/penguindb/gpdata/gpdatap2 /data1/gptest/penguindb/gpdata/gpdatap3)
 gpinit=${GPINIT}
 gpmaster=${GPMASTER}
 gpsrc=${GPSRC}
@@ -24,8 +23,8 @@ tpcblastindex=6
 let "tpcblastindex1=tpcblastindex-1"
 
 # modify thread number value should also modify the next index value, tpcclastindex should be the last index of this array (start with 0).
-numberoftpccthread=(8 16 32 64 128 256 512)
-# numberoftpccthread=(128 256 512)
+# numberoftpccthread=(8 16 32 64 128 256 512)
+numberoftpccthread=(128 256 512)
 tpcclastindex=6
 let "tpcclastindex1=tpcclastindex-1"
 
@@ -36,13 +35,9 @@ numberofycsbthread=(4 8 16 32 64 128 256)
 ycsblastindex=6
 let "ycsblastindex1=ycsblastindex-1"
 
-master_list=(gp-seg3)
+master_list=(gp-master)
 segment_list=()
-all_node_list=(gp-seg3)
-#standby_list=(gp-seg1)
-#master_list=(gp-master)
-#segment_list=(gp-seg1 gp-seg2 gp-seg3)
-#all_node_list=(gp-master gp-seg1 gp-seg2 gp-seg3)
+all_node_list=(gp-master)
 
 crdb_node_num=3
 crdb_node_list=(gp-master gp-seg1 gp-seg2)
@@ -50,12 +45,12 @@ leader_ip=9.39.242.133
 crdb_data_path="/data1/gptest/crdata"
 
 rootpwd="dell@2019"
-RESULT="/home/gpadmin/result"
+RESULT="/data/wookongdb/result"
 curResult=${RESULT}
 SIZE_LIST=(10 100 1000)
-SIZE=100
-USERNAME="gpadmin"
-MASTER_IP=10.77.110.147
+SIZE=1
+USERNAME="wookongdb"
+MASTER_IP=10.77.110.144
 PORT=15432
 SPORT=25432
 CPORT=30001
@@ -72,7 +67,7 @@ PGYCSBPATH='/data1/gptest/pg11.7/bin'
 PGYCSBTESTPATH='/data1/gptest/pg_ycsb-master'
 PGYCSB_RECORD_COUNT=10000000
 
-DATAHOME='/home/gpadmin/wkdb/gpdata'
+DATAHOME='/data/wookongdb/wkdb/gpdata'
 PGBENCH_TEST_TIME=60
 TEST_NUMBER=1
 
@@ -514,14 +509,14 @@ START_UP_CLUSTER_COCKROACHDB(){
 
 SHUTDOWN_CLUSTER(){
 	set +e
-        gpstop -M immediate -a
-	#for seg in ${all_node_list[@]}
-	#do
-#
-#		ssh ${seg} "kill -9 \$(ps -aux | grep ${USERNAME} | grep postgres | grep -v grep | awk '{print \$2}')"
-#		ssh ${seg} "ps -aux | grep ${USERNAME} | grep postgres | grep -v grep | awk '{print \$2}' | xargs kill -9"
-#		ssh ${seg} "find /tmp/.s.* -user ${USERNAME} -delete"
-#	done
+	gpstop -M immediate -a
+	# for seg in ${all_node_list[@]}
+	# do
+
+	# 	ssh ${seg} "kill -9 \$(ps -aux | grep ${USERNAME} | grep postgres | grep -v grep | awk '{print \$2}')"
+	# 	ssh ${seg} "ps -aux | grep ${USERNAME} | grep postgres | grep -v grep | awk '{print \$2}' | xargs kill -9"
+	# 	ssh ${seg} "find /tmp/.s.* -user ${USERNAME} -delete"
+	# done
 	set -e
 }
 
@@ -548,16 +543,15 @@ RESTART_CLUSTER_COCKROACHDB(){
 
 CREATE_CLUSTER(){
 	set +e
-	gpinitsystem -c ${gpinit}/gpinitsystem_config -a
+	echo 0 > /tmp/r1
+ 	gpinitsystem -c ${gpinit}/gpinitsystem_config -a
 
 
-	gpconfig -c gp_enable_global_deadlock_detector -v on
-	gpconfig -c log_statement -v none
-	#gpconfig -c max_connections -v 210 -m 70
-	# gpconfig -c max_prepared_transactions -v 100
+	#gpconfig -c gp_enable_global_deadlock_detector -v on
+	#gpconfig -c log_statement -v none
 	gpconfig -c max_connections -v 1800 -m 600
 	gpconfig -c max_prepared_transactions -v 600
-	gpconfig -c checkpoint_segments -v 2 --skipvalidation
+	#gpconfig -c checkpoint_segments -v 2 --skipvalidation
 	#gpconfig -c work_mem -v 1GB
 	#gpconfig -c shared_buffers -v 10GB
 	#gpconfig -c effective_cache_size -v 32GB
@@ -581,19 +575,20 @@ DESTROY_CLUSTER(){
 	SHUTDOWN_CLUSTER
 	sleep 5
 	set +e
-	#for seg in ${all_node_list[@]}
-	#do
-#		ssh ${seg} "rm -rf ${gpmaster}"
-#		echo ${gpdatap}
-#		for gpdatapath in ${gpdatap[@]}
-#		do 
-#			echo $gpdatapath
-#			ssh ${seg} "rm -rf ${gpdatapath}/*"
-#		done
-#	done
-        rm -rf ${GPMASTER}
-        rm -rf ${GPPRIMARYHOME}/* ${GPPRIMARYHOME}1/* ${GPPRIMARYHOME}2/* ${GPPRIMARYHOME}3/*
-        rm -rf /tmp/.s.*
+	# for seg in ${all_node_list[@]}
+	# do
+	# 	ssh ${seg} "rm -rf ${gpmaster}"
+	# 	echo ${gpdatap}
+	# 	for gpdatapath in ${gpdatap[@]}
+	# 	do 
+	# 		echo $gpdatapath
+	# 		ssh ${seg} "rm -rf ${gpdatapath}/*"
+	# 	done
+	# done
+	rm -rf ${GPMASTER}
+	rm -rf ${GPPRIMARYHOME}/* ${GPPRIMARYHOME}1/* ${GPPRIMARYHOME}2/* ${GPPRIMARYHOME}3/*
+	rm -rf /tmp/.s.*
+	
 	set -e
 }
 
@@ -650,10 +645,10 @@ COMPILE_SRC(){
 
 	if [[ "${FIRST}" ]]
 	then
-		rm -rf ${gptmp}
+		rm -rf ${gptmp} ${gpbin}
 		cp -r ${gpsrc} ${gptmp}
 	else
-		rm -rf ${gptmp}/src
+		rm -rf ${gptmp}/src ${gpbin}
 		cp -r ${gpsrc}/src ${gptmp}/
 	fi
 
@@ -677,9 +672,9 @@ COMPILE_SRC(){
 		INFO "compile in release mode..."
 		if [[ "${ATRUC}" ]]
 		then
-			./configure --prefix=${gpbin} --with-perl --with-python --with-libxml --disable-orca --disable-cassert --disable-pxf CFLAGS='-g3 -ggdb -O3 -fno-strict-aliasing -ldl -fno-omit-frame-pointer' CXXFLAGS='-std=c++11 -g3 -ggdb -O3 -fno-strict-aliasing -ldl -fno-omit-frame-pointer'
+			./configure --prefix=${gpbin} --with-perl --with-python --with-libxml --disable-orca --disable-cassert --disable-pxf CFLAGS='-g3 -ggdb -O2 -fno-strict-aliasing -ldl -fno-omit-frame-pointer' CXXFLAGS='-std=c++11 -g3 -ggdb -O2 -fno-strict-aliasing -ldl -fno-omit-frame-pointer'
 		else
-			./configure --prefix=${gpbin} --with-perl --with-gssapi --with-python --with-libxml --with-includes=/usr/include --disable-cassert --disable-orca --disable-pxf --disable-gpfdisk --without-zstd CFLAGS='-g3 -ggdb -O3 -fno-strict-aliasing -fno-omit-frame-pointer' CXXFLAGS='-g3 -ggdb -O3 -fno-strict-aliasing -fno-omit-frame-pointer'
+			./configure --prefix=${gpbin} --with-perl --with-gssapi --with-python --with-libxml --with-includes=/usr/include --disable-cassert --disable-orca --disable-pxf --disable-gpfdisk --without-zstd CFLAGS='-g3 -ggdb -O2 -fno-strict-aliasing -fno-omit-frame-pointer' CXXFLAGS='-g3 -ggdb -O2 -fno-strict-aliasing -fno-omit-frame-pointer'
 		fi
 	fi
 
@@ -3425,21 +3420,21 @@ HEAP_ROCKSDB_CREATE(){
 		sleep 10
 	elif [[ ! "$TEST_TPCC" ]]
 	then
-		CHECK_LTS_EXIST
-		CREATE_HEAP_DATABASE_FOR_TPCB
+		#CHECK_LTS_EXIST
+		#CREATE_HEAP_DATABASE_FOR_TPCB
 		# RESTART_CLUSTER
-		sleep 10
+		#sleep 10
 		CHECK_LTS_EXIST
 		CREATE_ROCKSDB_DATABASE_FOR_TPCB
 		# RESTART_CLUSTER
 		sleep 10
 	else
-		CHECK_LTS_EXIST
-		CREATE_DATABASE_FOR_TPCC "heap" $1 $2
+		# CHECK_LTS_EXIST
+		# CREATE_DATABASE_FOR_TPCC "heap" $1 $2
 		# RESTART_CLUSTER
 		# sleep 10
-		# CHECK_LTS_EXIST
-		# CREATE_DATABASE_FOR_TPCC "rocksdb" $1 $2
+		CHECK_LTS_EXIST
+		CREATE_DATABASE_FOR_TPCC "rocksdb" $1 $2
 		# RESTART_CLUSTER
 		sleep 10
 	fi
@@ -3476,10 +3471,10 @@ HEAP_ROCKSDB(){
 
 	if [[ "$TEST_TPCB" ]]
 	then
-		CHECK_LTS_EXIST
-		RUN_PGBENCH_TEST heap "tpcb"
+		#CHECK_LTS_EXIST
+		#RUN_PGBENCH_TEST heap "tpcb"
 		# RESTART_CLUSTER
-		sleep 10
+		#sleep 10
 		CHECK_LTS_EXIST
 		RUN_PGBENCH_TEST rocksdb "tpcb"
 		# RESTART_CLUSTER
@@ -3501,11 +3496,11 @@ HEAP_ROCKSDB(){
 	if [[ "$TEST_TPCC" ]]
 	then
 		set +e
-		CHECK_LTS_EXIST
-		RUN_TPCC_TEST "heap" $1 $2
-		# RESTART_CLUSTER
 		# CHECK_LTS_EXIST
-		# RUN_TPCC_TEST "rocksdb" $1 $2
+		# RUN_TPCC_TEST "heap" $1 $2
+		# RESTART_CLUSTER
+		CHECK_LTS_EXIST
+		RUN_TPCC_TEST "rocksdb" $1 $2
 		# RESTART_CLUSTER
 		set -e
 
@@ -4714,12 +4709,12 @@ main(){
 
 	if [[ "$BUILD_HR_TESTS" ]]
 	then
-		HEAP_ROCKSDB_CREATE 128 64
+		HEAP_ROCKSDB_CREATE 10 5
 	fi
 
 	if [[ "$RUN_HR_TESTS" ]]
 	then
-		HEAP_ROCKSDB 128 64
+		HEAP_ROCKSDB 10 5
 	fi
 
 	if [[ "$BUILD_OCC_TESTS" ]]

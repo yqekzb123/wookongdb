@@ -14,7 +14,7 @@
  * 3 means use hlc to get LTS timestamp
  * 4 means ss use hlc, sss use tcp to get LTS timestamp
  */
-#define HTTP_TYPE 0
+#define HTTP_TYPE 3
 typedef struct Lts_timestamp
 {
     uint64 lts;

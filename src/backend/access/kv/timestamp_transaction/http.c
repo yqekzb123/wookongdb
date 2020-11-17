@@ -22,7 +22,6 @@
 #include "miscadmin.h"
 #include "libtcp/libtcpforc.h"
 #include "tdb/storage_param.h"
-#include "tdb/timestamp_transaction/http.h"
 #include "libtcp/ip.h"
 #include "tdb/timestamp_transaction/hlc.h"
 
@@ -128,8 +127,8 @@ uint64 GetTimeStamp(void)
     }
     curl_easy_cleanup(curl);
 #elif (HTTP_TYPE == 2)
-	uint64 ts = getTimestamp();
-	if (ts == (uint64)-1)
+	uint64_t ts = getTimestamp();
+	if (ts == (uint64_t)-1)
 	{
 		core_dump();
 	}
@@ -186,8 +185,8 @@ uint64 GetTimeStamp(void)
 		default:
 			break;
 		}
-		uint64 ts = getTimestamp();
-		if (ts == (uint64)-1)
+		uint64_t ts = getTimestamp();
+		if (ts == (uint64_t)-1)
 		{
 			core_dump();
 		}

@@ -74,7 +74,6 @@
 #include "tdb/storage_param.h"			/* [hongyaozhao] */
 #include "tdb/ms.h"
 #include "access/rwset.h" /* [charleyzhao] */
-// #include "librw/librm.h"
 #include "tdb/timestamp_transaction/http.h"
 #include "tdb/timestamp_transaction/hlc.h"
 #include "cdb/cdbdtxts.h"
@@ -186,7 +185,7 @@ CreateSharedMemoryAndSemaphores(int port)
 		size = add_size(size, KVEnginePidTableShmemSize());
 		/* [hongyaozhao] statistics update memory */
 		size = add_size(size, StatisticsQueueShmemSize());
-		size = add_size(size, StoragePaxosPortShmemSize());
+		// size = add_size(size, StoragePaxosPortShmemSize());
 		size = add_size(size, TransactionStatisticsShmemSize());
 		size = add_size(size, SequenceGTSShmemSize());
 		//size = add_size(size, RangePlanQueueShmemSize());
@@ -298,8 +297,8 @@ CreateSharedMemoryAndSemaphores(int port)
 	 * [hongyaozhao] Set up the statistics update
 	 */
 	StatisticsQueueShmemInit();
-	//RangePlanQueueShmemInit();	/* this is temp no use */
-	StoragePaxosPortShmemInit();	
+	// RangePlanQueueShmemInit();	/* this is temp no use */
+	// StoragePaxosPortShmemInit();
 	RangeListQueueShmemInit();
 	TransactionStatisticsShmemInit();
 	getltsShmemInit();
@@ -397,7 +396,7 @@ CreateSharedMemoryAndSemaphores(int port)
 	GpExpandVersionShmemInit();
 
 	FtsProbeShmemInit();
-	// MSProbeShmemInit();
+	MSProbeShmemInit();
 #ifdef EXEC_BACKEND
 
 	/*

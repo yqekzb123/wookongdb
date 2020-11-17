@@ -53,7 +53,7 @@ extern pid_t MSProbePID(void);
 /*
  * Interface for WALREP specific checking
  */
-extern void HandleMSMessage(char* query_string);
+extern void HandleMSMessage(char* query_string, int length);
 extern bool ExecAddReplica(AddReplicaPlan sp);
 extern bool ExecRemoveReplica(RemoveReplicaPlan sp);
 extern bool ExecRebalance(RebalancePlan sp);

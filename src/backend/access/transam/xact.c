@@ -70,6 +70,7 @@
 #include "utils/timeout.h"
 #include "utils/timestamp.h"
 #include "pg_trace.h"
+#include "tdb/tdbkvam.h"
 
 #include "access/distributedlog.h"
 #include "cdb/cdbdistributedsnapshot.h"
@@ -2714,6 +2715,14 @@ CommitTransaction(void)
 
 	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
 		elog(DEBUG1, "CommitTransaction: called as segment Reader");
+
+	if (Gp_role == GP_ROLE_DISPATCH && !am_kv_storage)
+	{
+		if (transam_mode != TRANSAM_MODE_DEFAULT || transaction_type == KVENGINE_TRANSACTIONDB)
+		{
+			kvengine_commit();
+		}
+	}
 
 	/*
 	 * Do pre-commit processing that involves calling user-defined code, such
@@ -5361,6 +5370,13 @@ void CommitNotPreparedTransaction(void)
 				{
 					kvengine_abort();
 				}
+			}
+		}
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			if (transam_mode != TRANSAM_MODE_DEFAULT || transaction_type == KVENGINE_TRANSACTIONDB)
+			{
+				kvengine_commit();
 			}
 		}
 		CommitTransaction();

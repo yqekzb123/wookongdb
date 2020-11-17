@@ -1189,6 +1189,7 @@ update_stat_from_heart_beat(SSM_Statistics *temp_stat, RangeList *rangelist, Lis
 		}
 	}
 
+
 	/*
 	 * Traverse all the range, to see if any range needs to add or
 	 * delete copies or switch leader.
@@ -1215,6 +1216,7 @@ update_stat_from_heart_beat(SSM_Statistics *temp_stat, RangeList *rangelist, Lis
 		{
 			continue;
 		}
+#if 0
 		SplitPreparePlan sp = checkSplit(rangestat, range, segstat.segmentID, tempstat);
 		MergePlan mp = checkMerge(rangestat, range, context, tempstat);
 
@@ -1242,7 +1244,9 @@ update_stat_from_heart_beat(SSM_Statistics *temp_stat, RangeList *rangelist, Lis
 			context = lcons((RangePlan)mp, context);
 			updateTempSegStat(tempstat, (RangePlan)mp);
 		}
+#endif
 	}
 	*length = pl_index;
+
 	return ;
 }

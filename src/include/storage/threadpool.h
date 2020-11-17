@@ -11,16 +11,14 @@
  * All running and waiting tasks in the thread pool are a CThread_worker
  * Because all tasks are in the linked list, it is a linked list structure
  */
-typedef struct worker
-{
+typedef struct {
     /* 
      * Callback function, this function will be called when the task is running,
      * and can be declared as other forms
      */
-    void *(*process) (void *arg);
-    void *arg;/*Callback function parameters*/
+    void *(*process)(void *arg);
+    void *arg; /*Callback function parameters*/
     struct worker *next;
-
 } CThread_worker;
 
 /*Thread pool structure*/
@@ -42,7 +40,7 @@ typedef struct
 
 } CThread_pool;
 
-extern void pool_init (int max_thread_num);
-extern int pool_destroy (void);
-extern int pool_add_worker (void *(*process) (void *arg), void *arg);
-extern void *thread_routine (void *arg);
+void pool_init(int max_thread_num);
+int pool_destroy(void);
+int pool_add_worker(void *(*process)(void *arg), void *arg);
+void *thread_routine(void *arg);

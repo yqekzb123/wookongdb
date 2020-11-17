@@ -160,35 +160,35 @@ static const uint64_t kMaxSequenceNumber = 0xffffffffffffffff;
 enum KVReqType
 {
 	/* rocksdb */
-	ROCKSDB_PUT,
-	ROCKSDB_PUTRTS,
-	ROCKSDB_GET,
-	ROCKSDB_SCAN,
-	ROCKSDB_CYCLEGET,
-	ROCKSDB_DELETE,
-	ROCKSDB_UPDATE,
-	ROCKSDB_DELETE_DIRECT,
-	ROCKSDB_RANGESCAN,
-	ROCKSDB_PREPARE,
-	ROCKSDB_COMMIT,
-	ROCKSDB_ABORT,
-	ROCKSDB_CLEAR,
-	ROCKSDB_DETACH,
-	STATISTIC_READ,
-	STATISTIC_WRITE,
+	ROCKSDB_PUT, //0
+	ROCKSDB_PUTRTS, //1
+	ROCKSDB_GET, //2
+	ROCKSDB_SCAN, //3
+	ROCKSDB_CYCLEGET, //4
+	ROCKSDB_DELETE, //5
+	ROCKSDB_UPDATE, //6
+	ROCKSDB_DELETE_DIRECT, //7
+	ROCKSDB_RANGESCAN, // 8
+	ROCKSDB_PREPARE, // 9
+	ROCKSDB_COMMIT, // 10
+	ROCKSDB_ABORT, // 11
+	ROCKSDB_CLEAR, // 12
+	ROCKSDB_DETACH, // 13
+	STATISTIC_READ, // 14
+	STATISTIC_WRITE, // 15
 	/* null type */
-	GO_ON,
+	GO_ON, // 16
 	/* range management*/
-	RANGE_SCAN,
-	FIND_MIDDLE_KEY,
-	INIT_STATISTICS,
-	RANGE_CREATE,
-	ADDREPLICA,
-	REMOVEREPLICA,
-	CREATEGROUP,
-	REMOVEGROUP,
-	ADDGROUPMEMBER,
-	REMOVEGROUPMEMBER,
+	RANGE_SCAN, // 17
+	FIND_MIDDLE_KEY, // 18
+	INIT_STATISTICS, // 19
+	RANGE_CREATE, // 20
+	ADDREPLICA, // 21
+	REMOVEREPLICA, // 22
+	CREATEGROUP, // 23
+	REMOVEGROUP, // 24
+	ADDGROUPMEMBER, // 25
+	REMOVEGROUPMEMBER, // 26
 };
 
 enum KeyInitType
@@ -233,7 +233,6 @@ typedef struct
 	TupleValueSysAttrs sysattrs; /* fix len */
 	MemTupleData memtuple;		 /* var len */
 } TupleValueData;
-
 typedef TupleValueData *TupleValue;
 
 typedef struct
@@ -269,7 +268,6 @@ typedef struct
 	 * CommandId cmin;
 	 */
 } TupleKeyData;
-
 typedef TupleKeyData *TupleKey;
 
 typedef struct TupleKeySlice
@@ -354,13 +352,13 @@ typedef struct KVEngineScanDescData
 	CmdType Scantype; /* we use this to decide get or get_for_update */
 } KVEngineScanDescData;
 
-typedef struct KVEngineScanDescData *KVEngineScanDesc;
+typedef KVEngineScanDescData *KVEngineScanDesc;
 
 typedef struct RequestHeader
 {
 	int type;
 	int req_id;
-
+    int need_paxos;
 	int txn_mode; /* transaction mode, occ, new occ etc*/
 	int con_mode; /* consistency mode, sequence mode, casual mode etc*/
 	int transaction_op_type;

@@ -18,8 +18,6 @@
 #include "tdb/session_processor.h"
 
 extern List* kvengine_process_scan_all_range(void);
-extern void kvengine_process_scan_one_range_all_key(TupleKeySlice startkey, TupleKeySlice endkey,
-						RangeID rangeid, RangeSatistics* Rangestatis);
+extern void kvengine_process_scan_one_range_all_key(TupleKeySlice startkey, TupleKeySlice endkey, RangeID rangeid, RangeSatistics *Rangestatis, int gxid);
 extern ResponseHeader* kvengine_process_rangescan_req(RequestHeader* req);
 extern ResponseHeader* kvengine_process_init_statistics_req(RequestHeader* req);
-extern bool Rangeengineprocessor_create_paxos(RangeID rangeid, SegmentID* seglist, int segcount);

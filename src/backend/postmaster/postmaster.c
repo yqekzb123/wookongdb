@@ -157,7 +157,7 @@
 void FtsProbeMain(int argc, char *argv[]);
 #endif
 
-#define DISABLE_RANGE_DISTRIBUTED
+//#define DISABLE_RANGE_DISTRIBUTED
 /*
  * This is set in backends that are handling a GPDB specific message (FTS or
  * fault injector) on mirror.

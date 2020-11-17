@@ -421,7 +421,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	Assert(primaryGang);
 
 	cdbdisp_makeDispatchResults(ds, 1, flags & DF_CANCEL_ON_ERROR);
-	cdbdisp_makeDispatchParams (ds, 1, queryText, queryTextLength);
+	cdbdisp_makeDispatchParams(ds, 1, queryText, queryTextLength);
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
 

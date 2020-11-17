@@ -3137,6 +3137,10 @@ freePGconn(PGconn *conn)
 		free(conn->sslcompression);
 	if (conn->requirepeer)
 		free(conn->requirepeer);
+	// if (conn->ms_result_list)
+	// 	// free all of the list
+	// 	free_ms_list(conn);
+	// 	// free(ms_result_list);
 #if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	if (conn->krbsrvname)
 		free(conn->krbsrvname);

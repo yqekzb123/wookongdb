@@ -10,7 +10,6 @@
 #include "tdb/kvengine.h"
 #include "tdb/range.h"
 #include "tdb/rocks_engine.h"
-#include "paxos/paxos_for_c_include.h"
 #include "tdb/paxos_message.h"
 #include "tdb/route.h"
 #include "tdb/rangecache.h"
@@ -299,18 +298,6 @@ kvengine_pgprocess_put_req(RequestHeader* req)
 			put_req->header.gp_session_id, put_req->header.pid,
 			put_req->header.combocid_map_count))
 		{
-			if (enable_paxos)
-			{
-				int length = 0;
-				void* req = TransferMsgToPaxos(PAXOS_RUN_PUT, key, value, put_req->rangeid, &length);
-				int result = 0;
-				if (put_req->rangeid > 0 && put_req->rangeid < MAXRANGECOUNT)
-					result = paxos_storage_runpaxos(req, length, put_req->rangeid);
-				else
-					engine->put(engine, key, value);
-				range_free(req);
-			}
-			else
 				engine->put(engine, key, value);
 			put_res->checkUnique = true;
 		}
@@ -322,13 +309,6 @@ kvengine_pgprocess_put_req(RequestHeader* req)
 		DistributedTransactionId gxid = put_req->header.gxid;
 		KVEngineBatchInterface* batch_engine = engine->create_batch(engine, gxid, true);
 		batch_engine->put(batch_engine, key, value);
-		int length = 0;
-		if (enable_paxos)
-		{
-			void* req = TransferMsgToPaxos(PAXOS_RUN_PUT, key, value, put_req->rangeid, &length);
-			paxos_storage_save_to_batch((char *)req, length, put_req->rangeid, gxid);
-			range_free(req);
-		}
 		put_res->checkUnique = true;
 
 	}
@@ -356,7 +336,7 @@ get_all_second_index(Delete_UpdateRequest* delete_req, char* buffer, int count, 
 	if (count == 2)
 		return count - 1;
 
-	KVScanDesc desc = init_kv_scan(false);
+	KVScanDesc desc = init_kv_scan(false, NULL);
 	desc->engine_it = batch_engine->create_batch_iterator(desc->engine_it, batch_engine);
 	
 	Dataslice key = NULL;
@@ -1347,15 +1327,6 @@ l1:
 
 	if (kvengine_judge_dirty(cur_value.data, tp))
 	{
-		if (enable_paxos)
-		{
-			int length = 0;
-			DistributedTransactionId gxid = delete_req->header.gxid;
-			void* req = TransferMsgToPaxos(PAXOS_RUN_PUT, cur_key, cur_value, route.rangeID, &length);
-			paxos_storage_save_to_batch((char *)req, length, route.rangeID, gxid);
-			range_free(req);
-		}
-		else
 			batch_engine->put(batch_engine, cur_key, cur_value);
 	}
     commit_batch(batch_engine);
@@ -1796,29 +1767,11 @@ l2:
 	
 	if (kvengine_judge_dirty(cur_value.data, oldtup))
 	{
-		if (enable_paxos)
-		{
-			int length = 0;
-			DistributedTransactionId gxid = update_req->header.gxid;
-			void* req = TransferMsgToPaxos(PAXOS_RUN_PUT, cur_key, cur_value, route.rangeID, &length);
-			paxos_storage_save_to_batch((char *)req, length, route.rangeID, gxid);
-			range_free(req);
-		}
-		else
 			batch_engine->put(batch_engine, cur_key, cur_value);
 	}
 
 	if (kvengine_judge_dirty(newValue.data, newtup))
 	{
-		if (enable_paxos)
-		{
-			int length = 0;
-			DistributedTransactionId gxid = update_req->header.gxid;
-			void* req = TransferMsgToPaxos(PAXOS_RUN_PUT, newKey, newValue, route.rangeID, &length);
-			paxos_storage_save_to_batch((char *)req, length, route.rangeID, gxid);
-			range_free(req);
-		}
-		else
 			batch_engine->put(batch_engine, newKey, newValue);
 	}
 
@@ -2040,29 +1993,11 @@ kv_update_occ_internal(Delete_UpdateRequest* update_req, KVEngineBatchInterface*
 	
 	if (kvengine_judge_dirty(cur_value.data, oldtup))
 	{
-		if (enable_paxos)
-		{
-			int length = 0;
-			DistributedTransactionId gxid = update_req->header.gxid;
-			void* req = TransferMsgToPaxos(PAXOS_RUN_PUT, cur_key, cur_value, route.rangeID, &length);
-			paxos_storage_save_to_batch((char *)req, length, route.rangeID, gxid);
-			range_free(req);
-		}
-		else
 			batch_engine->put(batch_engine, cur_key, cur_value);
 	}
 
 	if (kvengine_judge_dirty(newValue.data, newtup))
 	{
-		if (enable_paxos)
-		{
-			int length = 0;
-			DistributedTransactionId gxid = update_req->header.gxid;
-			void* req = TransferMsgToPaxos(PAXOS_RUN_PUT, newKey, newValue, route.rangeID, &length);
-			paxos_storage_save_to_batch((char *)req, length, route.rangeID, gxid);
-			range_free(req);
-		}
-		else
 			batch_engine->put(batch_engine, newKey, newValue);
 	}
 
@@ -2205,7 +2140,7 @@ ResponseHeader*
 kvengine_pgprocess_scan_req(RequestHeader* req)
 {
 	ScanWithKeyRequest *scan_req = (ScanWithKeyRequest*) req;
-	KVScanDesc desc = init_kv_scan(scan_req->isforward);
+	KVScanDesc desc = init_kv_scan(scan_req->isforward, NULL);
 
 	// init iter with batch
 	TransactionId gxid = req->gxid;
@@ -2271,7 +2206,7 @@ ResponseHeader*
 kvengine_pgprocess_multi_get_req(RequestHeader* req)
 {
 	ScanWithKeyRequest *scan_req = (ScanWithKeyRequest*) req;
-	KVScanDesc desc = init_kv_scan(true);
+	KVScanDesc desc = init_kv_scan(true, NULL);
 	char *buffer = scan_req->start_and_end_key;
 	Dataslice key = NULL;
 	Dataslice value = NULL;
@@ -2501,8 +2436,6 @@ kvengine_pgprocess_commit(RequestHeader* req)
 	if (batch_engine)
 	{
 		batch_engine->commit_and_destroy(engine, batch_engine, gxid);
-		if (enable_paxos)
-			paxos_storage_commit_batch(gxid);
 	}
     // todo: check if batch_engine create fail and add the return value of commit operation.
 	return res;
@@ -2520,8 +2453,6 @@ kvengine_pgprocess_abort(RequestHeader* req)
 	if (batch_engine)
 	{
 		batch_engine->abort_and_destroy(engine, batch_engine, gxid);
-		if (enable_paxos)
-			paxos_storage_commit_batch(gxid);
 	}
     // todo: check if batch_engine create fail and add the return value of commit operation.
 	return res;
